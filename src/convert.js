@@ -81,7 +81,48 @@ function withoutDuplicates(raws) {
  * earlier version of this one) have another number, or none, and are downloaded
  * once more, so every match is read the same way.
  */
-export const DETAILS_VERSION = 2;
+export const DETAILS_VERSION = 3;
+
+/** The federation's event types the app shows in a match's timeline, and the app's names for them. */
+const EVENT_KINDS = {
+  goal: 'goal',
+  'goal-penalty': 'goalFromSeven',
+  'missed-penalty': 'missedSeven',
+  penalty: 'twoMinutes',
+  'yellow-card': 'yellowCard',
+  'red-card': 'redCard',
+};
+
+/**
+ * The timeline of a match, oldest first, with the fields the app reads
+ * (`s` seconds on the match clock, `k` kind, `h` home team, `p` player, `n` shirt
+ * number, `hs`/`as` score after a goal, `pt` half). The clock is counted from the
+ * match's start as the federation's site does.
+ */
+export function buildEvents(detail) {
+  const homeId = detail.homeParticipant.id;
+  const start = new Date(detail.dateFrom).getTime();
+
+  return (detail.matchEvents ?? [])
+    .filter((event) => EVENT_KINDS[event.eventType] && event.athlete && event.date)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .map((event) => {
+      const kind = EVENT_KINDS[event.eventType];
+      const isGoal = kind === 'goal' || kind === 'goalFromSeven';
+      const score = /^(\d+):(\d+)$/.exec(String(event.result ?? ''));
+      const jersey = (event.athlete.additionalData ?? []).find((d) => d.name === 'jersey-number');
+      return {
+        s: Math.max(0, Math.round((new Date(event.date).getTime() - start) / 1000)),
+        k: kind,
+        h: event.participant?.id === homeId,
+        p: tidy(`${event.athlete.firstName} ${event.athlete.lastName}`),
+        n: intOrNull(jersey?.value),
+        hs: isGoal && score ? Number(score[1]) : null,
+        as: isGoal && score ? Number(score[2]) : null,
+        pt: intOrNull(event.matchPart) ?? 1,
+      };
+    });
+}
 
 /** Halftime, referees and the players with their goals and sanctions. */
 export function buildDetails(detail) {
@@ -145,6 +186,7 @@ export function buildDetails(detail) {
     homePlayers: players(detail.homeParticipantLineup),
     awayPlayers: players(detail.visitingParticipantLineup),
     hasFullRoster: true,
+    events: buildEvents(detail),
     importVersion: DETAILS_VERSION,
   };
 }
