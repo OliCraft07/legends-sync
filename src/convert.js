@@ -76,6 +76,13 @@ function withoutDuplicates(raws) {
   });
 }
 
+/**
+ * Stored with every match's details. Details written by an earlier importer (or an
+ * earlier version of this one) have another number, or none, and are downloaded
+ * once more, so every match is read the same way.
+ */
+export const DETAILS_VERSION = 2;
+
 /** Halftime, referees and the players with their goals and sanctions. */
 export function buildDetails(detail) {
   const homeId = detail.homeParticipant.id;
@@ -138,6 +145,7 @@ export function buildDetails(detail) {
     homePlayers: players(detail.homeParticipantLineup),
     awayPlayers: players(detail.visitingParticipantLineup),
     hasFullRoster: true,
+    importVersion: DETAILS_VERSION,
   };
 }
 
@@ -218,6 +226,7 @@ export function needsDetail(raw, existing) {
   if (matchKind(raw) === 'upcoming') return false;
   if (matchKind(raw) === 'finished' && intOrNull(raw.homeParticipantResult) === null) return false;
   if (!existing || !existing.details || existing.details.hasFullRoster !== true) return true;
+  if (existing.details.importVersion !== DETAILS_VERSION) return true;
   if (existing.live === true) return true;
   if (matchKind(raw) === 'finished') {
     return (
