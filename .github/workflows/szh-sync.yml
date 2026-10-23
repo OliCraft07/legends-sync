@@ -1,0 +1,50 @@
+name: Zápasy zo SZH
+
+# Každú hodinu: hlavné sťahovanie zápasov a tabuliek (v zápasové dni; inak každú 6. hodinu)
+# a sledovanie zápasov, ktoré sa práve hrajú, každú minútu. Beh ukončí posledný zápas.
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'auto = ako pri plánovanom behu, baseline = len hlavné sťahovanie, live = len zápasy naživo'
+        type: choice
+        options: [auto, baseline, live]
+        default: auto
+      dry_run:
+        description: 'Skúška: nič sa nezapíše do databázy'
+        type: boolean
+        default: true
+
+# Naraz beží len jedno sťahovanie; ďalšie počká, aby sa nepísalo do databázy dvakrát.
+concurrency:
+  group: szh-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Ak zväz zmení web alebo sa pokazí kód, testy zlyhajú skôr, než sa niečo zapíše.
+      - run: npm test
+
+      - name: Sťahovanie
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          MODE: ${{ inputs.mode || 'auto' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
+        run: node src/cli.js --mode "$MODE" $DRY_RUN --max-minutes 170
