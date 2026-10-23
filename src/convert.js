@@ -159,7 +159,36 @@ function sameLocalDay(a, b) {
  * the rosters). What the federation does not know stays as it was: the venue
  * an admin typed, and a kickoff time an admin set while the federation has none.
  */
-export function buildMatchDoc({ competition, leagueName, id, raw, detail = null, existing = null }) {
+/**
+ * Finds a team's logo. The federation has none for some teams (mostly second
+ * teams of a club), so, in this order:
+ *   1. the same team's logo anywhere in the data read (any category),
+ *   2. the logo of the same club's other team: "MHK Piešťany B" and "MHK Piešťany"
+ *      use that of "MHK Piešťany A",
+ *   3. the logo the app already has for a team of that name.
+ * [known] and [stored] are lists of [team name, logo address]. null when none.
+ */
+export function makeLogoFinder(known, stored = []) {
+  const key = (name) => tidy(name).toLowerCase();
+  // A single trailing letter after a space ("... B") marks a club's second team.
+  const club = (name) => key(name).replace(/\s+[a-z]$/, '');
+
+  const exact = new Map();
+  const byClub = new Map();
+  for (const [name, url] of known) {
+    if (!name || !url) continue;
+    if (!exact.has(key(name))) exact.set(key(name), url);
+    if (!byClub.has(club(name))) byClub.set(club(name), url);
+  }
+  const keptByApp = new Map();
+  for (const [name, url] of stored) {
+    if (name && url && !keptByApp.has(key(name))) keptByApp.set(key(name), url);
+  }
+
+  return (name) => exact.get(key(name)) ?? byClub.get(club(name)) ?? keptByApp.get(key(name)) ?? null;
+}
+
+export function buildMatchDoc({ competition, leagueName, id, raw, detail = null, existing = null, findLogo = null }) {
   const source = detail ?? raw;
   const kind = matchKind(source);
   const homeIsOurs = source.homeParticipant.id === competition.teamId;
@@ -199,7 +228,9 @@ export function buildMatchDoc({ competition, leagueName, id, raw, detail = null,
 
   const existingOpponent = existing ? (existing.homeTeam === OUR_TEAM_NAME ? existing.awayTeam : existing.homeTeam) : null;
   const opponentLogoUrl =
-    opponent.logoEntity?.url ?? (existingOpponent === opponentName ? existing?.opponentLogoUrl ?? null : null);
+    opponent.logoEntity?.url ??
+    findLogo?.(opponentName) ??
+    (existingOpponent === opponentName ? existing?.opponentLogoUrl ?? null : null);
 
   return {
     category: competition.category,
@@ -238,7 +269,7 @@ export function needsDetail(raw, existing) {
 }
 
 /** A league table as the app stores it. */
-export function buildStandingsDoc({ competition, rows, now }) {
+export function buildStandingsDoc({ competition, rows, now, findLogo = null }) {
   return {
     category: competition.category,
     updatedAt: now,
@@ -252,7 +283,7 @@ export function buildStandingsDoc({ competition, rows, now }) {
         goalsFor: r.goalsFor,
         goalsAgainst: r.goalsAgainst,
         points: r.points,
-        logoUrl: r.logoUrl ?? null,
+        logoUrl: r.logoUrl ?? findLogo?.(r.team) ?? null,
         isOurs: r.teamId === competition.teamId,
       })),
   };

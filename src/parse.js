@@ -15,11 +15,22 @@ export function parseLevelPage(html) {
   const matchesOf = (name) => (tab(name)?.childLevels ?? []).flatMap((c) => c.matches ?? []);
   const scoreboards = (tab('standings')?.childLevels ?? []).flatMap((c) => c.scoreboards ?? []);
 
-  return {
-    leagueName: holder.league?.name ?? '',
-    matches: [...matchesOf('results'), ...matchesOf('upcoming')],
-    standings: scoreboards.map(readScoreboardRow),
-  };
+  const matches = [...matchesOf('results'), ...matchesOf('upcoming')];
+  const standings = scoreboards.map(readScoreboardRow);
+
+  // Every logo address the page gives, by team name. A team's table row sometimes
+  // has none while its matches do (and the other way round).
+  const logos = [];
+  for (const match of matches) {
+    for (const team of [match.homeParticipant, match.visitingParticipant]) {
+      if (team?.name && team.logoEntity?.url) logos.push([team.name, team.logoEntity.url]);
+    }
+  }
+  for (const row of standings) {
+    if (row.team && row.logoUrl) logos.push([row.team, row.logoUrl]);
+  }
+
+  return { leagueName: holder.league?.name ?? '', matches, standings, logos };
 }
 
 function readScoreboardRow(row) {

@@ -1,5 +1,5 @@
 import { competitions as defaultCompetitions, LIVE_LEAD_MINUTES, LIVE_TRAIL_MINUTES, OUR_TEAM_NAME } from './config.js';
-import { buildMatchDoc, buildStandingsDoc, matchKind, needsDetail, ourMatches, sameDoc } from './convert.js';
+import { buildMatchDoc, buildStandingsDoc, makeLogoFinder, matchKind, needsDetail, ourMatches, sameDoc } from './convert.js';
 import { parseLevelPage, parseMatchPage } from './parse.js';
 import { slovakDay, slovakHour } from './time.js';
 
@@ -23,16 +23,25 @@ export async function runBaseline({ client, store, now = () => new Date(), log =
   const matchWrites = [];
   const standingsWrites = [];
 
+  // First every competition is read, because a team without a logo in one category
+  // may have it in another.
+  const pages = [];
   for (const competition of competitions) {
     log(`Kategória ${competition.category}: sťahujem súťaž ${competition.level}/${competition.stage}`);
-    let page;
     try {
-      page = parseLevelPage(await client.levelPage(competition.level, competition.stage));
+      pages.push({ competition, page: parseLevelPage(await client.levelPage(competition.level, competition.stage)) });
     } catch (error) {
       summary.errors.push(`${competition.category}: ${error.message}`);
-      continue;
     }
+  }
 
+  const storedLogos = [...existing.values()].map((doc) => [
+    doc.homeTeam === OUR_TEAM_NAME ? doc.awayTeam : doc.homeTeam,
+    doc.opponentLogoUrl,
+  ]);
+  const findLogo = makeLogoFinder(pages.flatMap(({ page }) => page.logos), storedLogos);
+
+  for (const { competition, page } of pages) {
     const ours = ourMatches(competition, page.matches);
     if (ours.length === 0) {
       summary.warnings.push(`${competition.category}: nenašli sa žiadne zápasy nášho tímu (číslo tímu ${competition.teamId} v config.js?)`);
@@ -48,7 +57,7 @@ export async function runBaseline({ client, store, now = () => new Date(), log =
           summary.warnings.push(`${competition.category}: detail zápasu ${raw.id}: ${error.message}`);
         }
       }
-      const doc = buildMatchDoc({ competition, leagueName: page.leagueName, id, raw, detail, existing: before });
+      const doc = buildMatchDoc({ competition, leagueName: page.leagueName, id, raw, detail, existing: before, findLogo });
       if (!before) {
         summary.added++;
       } else if (!sameDoc(doc, before)) {
@@ -71,7 +80,7 @@ export async function runBaseline({ client, store, now = () => new Date(), log =
       }
     }
 
-    const table = buildStandingsDoc({ competition, rows: page.standings, now: now() });
+    const table = buildStandingsDoc({ competition, rows: page.standings, now: now(), findLogo });
     if (table.rows.length > 0) {
       const before = existingStandings.get(competition.category);
       const stale = !before || now() - before.updatedAt > STANDINGS_REFRESH_MS;
