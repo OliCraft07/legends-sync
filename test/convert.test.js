@@ -3,6 +3,7 @@ import { describe, test } from 'node:test';
 
 import {
   buildDetails,
+  DETAILS_VERSION,
   buildMatchDoc,
   buildStandingsDoc,
   matchKind,
@@ -237,6 +238,7 @@ describe('details of a played match', () => {
     assert.equal(details.homePlayers.length, 5);
     assert.equal(details.awayPlayers.length, 4);
     assert.equal(details.hasFullRoster, true);
+    assert.equal(details.importVersion, DETAILS_VERSION);
 
     const top = details.homePlayers.find((p) => p.goals === 11);
     assert.equal(top.number !== null, true);
@@ -294,7 +296,7 @@ describe('details of a played match', () => {
 describe('deciding what to download', () => {
   const page = level();
   const raw = byId(page, 90785);
-  const stored = () => ({ homeScore: 49, awayScore: 35, live: false, details: { hasFullRoster: true } });
+  const stored = () => ({ homeScore: 49, awayScore: 35, live: false, details: { hasFullRoster: true, importVersion: DETAILS_VERSION } });
 
   test('an upcoming match needs nothing', () => {
     assert.equal(needsDetail(byId(page, 90748), null), false);
@@ -311,7 +313,10 @@ describe('deciding what to download', () => {
 
   test('a changed result, an old-style roster or a match marked live need the page again', () => {
     assert.equal(needsDetail(raw, { ...stored(), homeScore: 48 }), true);
-    assert.equal(needsDetail(raw, { ...stored(), details: { hasFullRoster: false } }), true);
+    assert.equal(needsDetail(raw, { ...stored(), details: { hasFullRoster: false, importVersion: DETAILS_VERSION } }), true);
+    // Details written by an earlier importer are read once more.
+    assert.equal(needsDetail(raw, { ...stored(), details: { hasFullRoster: true } }), true);
+    assert.equal(needsDetail(raw, { ...stored(), details: { hasFullRoster: true, importVersion: DETAILS_VERSION - 1 } }), true);
     assert.equal(needsDetail(raw, { ...stored(), live: true }), true);
   });
 
