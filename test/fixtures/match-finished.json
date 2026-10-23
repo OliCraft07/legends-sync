@@ -1,0 +1,1595 @@
+{
+ "homeParticipantLineup": [
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "logoEntity": {
+      "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+      "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+      "title": "666661",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 100
+     },
+     "type": "Local",
+     "id": 6569
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "e4ef7d7e-2f02-42a2-928f-81c63e4b2ae9",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6581
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "Akadémia TT kraja",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "a40c50c3-12f7-4ecc-aef0-7585ba169d2b",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6650
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260828,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "2",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260829,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260830,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260831,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "1",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260832,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260833,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260834,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208654,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "55",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Adam",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "56a345cd-dea2-4420-b1bf-c0f50ad2d347",
+    "url": "https://cdn.handball.eliterro.sk/56a345cd-dea2-4420-b1bf-c0f50ad2d347.webp",
+    "title": "840864",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": false,
+   "id": 2527
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "logoEntity": {
+      "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+      "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+      "title": "666661",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 100
+     },
+     "type": "Local",
+     "id": 6569
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "Akadémia TT kraja",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "a40c50c3-12f7-4ecc-aef0-7585ba169d2b",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6650
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "33ce7f34-2710-4aef-9e16-ba347076c378",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6549
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260835,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "7",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260836,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "2",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260837,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260838,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260839,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260840,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260841,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208038,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "24",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Boris",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "eef8ed87-8f49-46ff-afb2-2174b42f1092",
+    "url": "https://cdn.handball.eliterro.sk/eef8ed87-8f49-46ff-afb2-2174b42f1092.webp",
+    "title": "838689",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": true,
+   "id": 572
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "logoEntity": {
+      "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+      "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+      "title": "666661",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 100
+     },
+     "type": "Local",
+     "id": 6569
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "Akadémia TT kraja",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "a40c50c3-12f7-4ecc-aef0-7585ba169d2b",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6650
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260842,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "2",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260843,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260844,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260845,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260846,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260847,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260848,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208615,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "10",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Cyril",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "f8a3041d-1e00-4f49-86a3-2d130bd02e7d",
+    "url": "https://cdn.handball.eliterro.sk/f8a3041d-1e00-4f49-86a3-2d130bd02e7d.webp",
+    "title": "840953",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": true,
+   "id": 2609
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "logoEntity": {
+      "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+      "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+      "title": "666661",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 100
+     },
+     "type": "Local",
+     "id": 6569
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "Akadémia TT kraja",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "a40c50c3-12f7-4ecc-aef0-7585ba169d2b",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6650
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260849,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260850,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260851,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260852,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260853,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260854,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260855,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208613,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "3",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Dušan",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "a4cfdce9-c110-4bba-a1f9-d475331adafb",
+    "url": "https://cdn.handball.eliterro.sk/a4cfdce9-c110-4bba-a1f9-d475331adafb.webp",
+    "title": "840946",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": false,
+   "id": 2606
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "Akadémia TT kraja",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "a40c50c3-12f7-4ecc-aef0-7585ba169d2b",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6650
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "logoEntity": {
+      "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+      "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+      "title": "666661",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 100
+     },
+     "type": "Local",
+     "id": 6569
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "33ce7f34-2710-4aef-9e16-ba347076c378",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6549
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HC Sporta Hlohovec",
+     "shortName": "SPORTAcademy Hlohovec",
+     "logo": "a7318567-8b0e-4196-8730-ec551cb5d261",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 7324
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260856,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "11",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260857,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260858,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "1",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260859,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260860,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260861,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260862,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208618,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "55",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Emil",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "495dff82-2e74-4868-b7d0-c312de59e865",
+    "url": "https://cdn.handball.eliterro.sk/495dff82-2e74-4868-b7d0-c312de59e865.webp",
+    "title": "840954",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": true,
+   "id": 2612
+  }
+ ],
+ "visitingParticipantLineup": [
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HáO TJ Slovan Modra",
+     "shortName": "Slovan Modra",
+     "logo": "50e721d0-ff1d-42bd-b057-48d1351fe273",
+     "logoEntity": null,
+     "type": "Local",
+     "id": 6580
+    },
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HáO TJ Slovan Modra",
+     "shortName": "Slovan Modra",
+     "logo": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+     "logoEntity": {
+      "id": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+      "url": "https://cdn.handball.eliterro.sk/da818ea9-79b3-4ad1-9408-da5b2d39f8e1.webp",
+      "title": "666660",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 119
+     },
+     "type": "Local",
+     "id": 6568
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260716,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260717,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260718,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260719,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260720,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260721,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260722,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208634,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "21",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Filip",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "48d39584-9058-4f88-af48-e91b3c195f2c",
+    "url": "https://cdn.handball.eliterro.sk/48d39584-9058-4f88-af48-e91b3c195f2c.webp",
+    "title": "840774",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 626
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": false,
+   "id": 2537
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HáO TJ Slovan Modra",
+     "shortName": "Slovan Modra",
+     "logo": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+     "logoEntity": {
+      "id": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+      "url": "https://cdn.handball.eliterro.sk/da818ea9-79b3-4ad1-9408-da5b2d39f8e1.webp",
+      "title": "666660",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 119
+     },
+     "type": "Local",
+     "id": 6568
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260723,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "2",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260724,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260725,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260726,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "1",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260727,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260728,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260729,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208096,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "13",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Gabriel",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "2414a3eb-7ce5-43fe-9772-3d24d2117070",
+    "url": "https://cdn.handball.eliterro.sk/2414a3eb-7ce5-43fe-9772-3d24d2117070.webp",
+    "title": "840715",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": true,
+   "id": 2299
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HáO TJ Slovan Modra",
+     "shortName": "Slovan Modra",
+     "logo": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+     "logoEntity": {
+      "id": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+      "url": "https://cdn.handball.eliterro.sk/da818ea9-79b3-4ad1-9408-da5b2d39f8e1.webp",
+      "title": "666660",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 119
+     },
+     "type": "Local",
+     "id": 6568
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260730,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260731,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260732,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260733,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260734,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260735,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260736,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 208624,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "1",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Henrich",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "9cb51bae-0666-451d-8eb2-90303e66a063",
+    "url": "https://cdn.handball.eliterro.sk/9cb51bae-0666-451d-8eb2-90303e66a063.webp",
+    "title": "840718",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": true,
+   "id": 2296
+  },
+  {
+   "teams": [
+    {
+     "levels": [],
+     "statistics": [],
+     "activeTo": null,
+     "name": "HáO TJ Slovan Modra",
+     "shortName": "Slovan Modra",
+     "logo": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+     "logoEntity": {
+      "id": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+      "url": "https://cdn.handball.eliterro.sk/da818ea9-79b3-4ad1-9408-da5b2d39f8e1.webp",
+      "title": "666660",
+      "description": null,
+      "type": "image/webp",
+      "width": 100,
+      "height": 119
+     },
+     "type": "Local",
+     "id": 6568
+    }
+   ],
+   "statistics": [],
+   "matchStatistics": [
+    {
+     "id": 260737,
+     "name": "goals",
+     "type": "text",
+     "unit": null,
+     "value": "3",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260738,
+     "name": "penalty-shot-7m-p",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260739,
+     "name": "penalty-shot-7m-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260740,
+     "name": "penalty-2m",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260741,
+     "name": "penalty-n",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260742,
+     "name": "penalty-d",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    },
+    {
+     "id": 260743,
+     "name": "penalty-dt",
+     "type": "text",
+     "unit": null,
+     "value": "0",
+     "group": null,
+     "priority": "Primary"
+    }
+   ],
+   "nationality": null,
+   "additionalData": [
+    {
+     "id": 220844,
+     "type": "text",
+     "name": "jersey-number",
+     "value": "10",
+     "priority": "Primary",
+     "group": null
+    }
+   ],
+   "type": "Local",
+   "partners": [],
+   "firstName": "Ivan",
+   "lastName": "NOVÁK",
+   "label": null,
+   "avatar": null,
+   "avatarEntity": {
+    "id": "74903b8b-a5b3-476d-ab03-53942a1b3139",
+    "url": "https://cdn.handball.eliterro.sk/noindex/74903b8b-a5b3-476d-ab03-53942a1b3139.webp",
+    "title": "854430",
+    "description": null,
+    "type": "image/webp",
+    "width": 470,
+    "height": 627
+   },
+   "nationalAvatar": null,
+   "nationalAvatarEntity": null,
+   "canIndexImages": false,
+   "id": 7712
+  }
+ ],
+ "matchEvents": [
+  {
+   "date": "2026-10-17T12:00:49Z",
+   "eventType": "goal",
+   "points": 1,
+   "description": "s1",
+   "matchPart": 1,
+   "matchPartName": "period-half",
+   "result": "1:0",
+   "athlete": {
+    "teams": [],
+    "statistics": [],
+    "matchStatistics": [],
+    "nationality": null,
+    "additionalData": [
+     {
+      "id": 208615,
+      "type": "text",
+      "name": "jersey-number",
+      "value": "10",
+      "priority": "Primary",
+      "group": null
+     }
+    ],
+    "type": "Local",
+    "partners": [],
+    "firstName": "Cyril",
+    "lastName": "NOVÁK",
+    "label": null,
+    "avatar": null,
+    "avatarEntity": null,
+    "nationalAvatar": null,
+    "nationalAvatarEntity": null,
+    "canIndexImages": false,
+    "id": 2609
+   },
+   "participant": {
+    "$type": "Team",
+    "levels": [],
+    "statistics": [],
+    "activeTo": null,
+    "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+    "shortName": "SPORTAcademy Hlohovec",
+    "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+    "logoEntity": {
+     "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+     "title": "666661",
+     "description": null,
+     "type": "image/webp",
+     "width": 100,
+     "height": 100
+    },
+    "type": "Local",
+    "id": 6569
+   }
+  },
+  {
+   "date": "2026-10-17T12:01:52Z",
+   "eventType": "penalty",
+   "points": 0,
+   "description": "2M",
+   "matchPart": 1,
+   "matchPartName": "period-half",
+   "result": "1:0",
+   "athlete": {
+    "teams": [],
+    "statistics": [],
+    "matchStatistics": [],
+    "nationality": null,
+    "additionalData": [
+     {
+      "id": 208654,
+      "type": "text",
+      "name": "jersey-number",
+      "value": "55",
+      "priority": "Primary",
+      "group": null
+     }
+    ],
+    "type": "Local",
+    "partners": [],
+    "firstName": "Adam",
+    "lastName": "NOVÁK",
+    "label": null,
+    "avatar": null,
+    "avatarEntity": null,
+    "nationalAvatar": null,
+    "nationalAvatarEntity": null,
+    "canIndexImages": false,
+    "id": 2527
+   },
+   "participant": {
+    "$type": "Team",
+    "levels": [],
+    "statistics": [],
+    "activeTo": null,
+    "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+    "shortName": "SPORTAcademy Hlohovec",
+    "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+    "logoEntity": {
+     "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+     "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+     "title": "666661",
+     "description": null,
+     "type": "image/webp",
+     "width": 100,
+     "height": 100
+    },
+    "type": "Local",
+    "id": 6569
+   }
+  },
+  {
+   "date": "2026-10-17T12:01:58Z",
+   "eventType": "missed-penalty",
+   "points": 0,
+   "description": "ps0",
+   "matchPart": 1,
+   "matchPartName": "period-half",
+   "result": "1:0",
+   "athlete": {
+    "teams": [],
+    "statistics": [],
+    "matchStatistics": [],
+    "nationality": null,
+    "additionalData": [
+     {
+      "id": 208080,
+      "type": "text",
+      "name": "jersey-number",
+      "value": "18",
+      "priority": "Primary",
+      "group": null
+     }
+    ],
+    "type": "NationalLocal",
+    "partners": [],
+    "firstName": "Jozef",
+    "lastName": "NOVÁK",
+    "label": null,
+    "avatar": null,
+    "avatarEntity": null,
+    "nationalAvatar": null,
+    "nationalAvatarEntity": null,
+    "canIndexImages": false,
+    "id": 587
+   },
+   "participant": {
+    "$type": "Team",
+    "levels": [],
+    "statistics": [],
+    "activeTo": null,
+    "name": "HáO TJ Slovan Modra",
+    "shortName": "Slovan Modra",
+    "logo": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+    "logoEntity": {
+     "id": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+     "url": "https://cdn.handball.eliterro.sk/da818ea9-79b3-4ad1-9408-da5b2d39f8e1.webp",
+     "title": "666660",
+     "description": null,
+     "type": "image/webp",
+     "width": 100,
+     "height": 119
+    },
+    "type": "Local",
+    "id": 6568
+   }
+  }
+ ],
+ "childMatches": [],
+ "people": [
+  {
+   "id": 206,
+   "firstName": "Karol",
+   "lastName": "NOVÁK",
+   "avatar": null,
+   "avatarEntity": null,
+   "contacts": [],
+   "type": "referee1",
+   "category": null
+  },
+  {
+   "id": 351,
+   "firstName": "Ladislav",
+   "lastName": "NOVÁK",
+   "avatar": null,
+   "avatarEntity": null,
+   "contacts": [],
+   "type": "referee2",
+   "category": null
+  },
+  {
+   "id": 160,
+   "firstName": "Marek",
+   "lastName": "NOVÁK",
+   "avatar": null,
+   "avatarEntity": null,
+   "contacts": [],
+   "type": "game-timekeeper",
+   "category": null
+  },
+  {
+   "id": 161,
+   "firstName": "Norbert",
+   "lastName": "NOVÁK",
+   "avatar": null,
+   "avatarEntity": null,
+   "contacts": [],
+   "type": "official-scorer",
+   "category": null
+  },
+  {
+   "id": 2029,
+   "firstName": "Oto",
+   "lastName": "NOVÁK",
+   "avatar": null,
+   "avatarEntity": null,
+   "contacts": [],
+   "type": "organizer",
+   "category": null
+  },
+  {
+   "id": 2035,
+   "firstName": "Peter",
+   "lastName": "NOVÁK",
+   "avatar": null,
+   "avatarEntity": null,
+   "contacts": [],
+   "type": "doctor",
+   "category": null
+  }
+ ],
+ "forms": [],
+ "votesOnSite": null,
+ "lineupType": "MatchRostersOnly",
+ "hasStories": false,
+ "id": 90785,
+ "dateFrom": "2026-10-17T12:00:00Z",
+ "dateTo": "2026-10-17T13:30:43.729591Z",
+ "actualTime": "01:00:00",
+ "state": "Finished",
+ "category": null,
+ "video": null,
+ "round": 7,
+ "roundName": "7. kolo",
+ "homeParticipantResult": "49",
+ "visitingParticipantResult": "35",
+ "homeParticipantPoints": null,
+ "visitingParticipantPoints": null,
+ "subtitle": "(25:16,24:19,0:0)",
+ "homeParticipant": {
+  "$type": "Team",
+  "levels": [],
+  "statistics": [],
+  "activeTo": null,
+  "name": "HC Sporta Hlohovec / HŠK Legends Šaľa",
+  "shortName": "SPORTAcademy Hlohovec",
+  "logo": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+  "logoEntity": {
+   "id": "136b9ebe-2f26-4bc9-a615-b643af7b2269",
+   "url": "https://cdn.handball.eliterro.sk/136b9ebe-2f26-4bc9-a615-b643af7b2269.webp",
+   "title": "666661",
+   "description": null,
+   "type": "image/webp",
+   "width": 100,
+   "height": 100
+  },
+  "type": "Local",
+  "id": 6569
+ },
+ "visitingParticipant": {
+  "$type": "Team",
+  "levels": [],
+  "statistics": [],
+  "activeTo": null,
+  "name": "HáO TJ Slovan Modra",
+  "shortName": "Slovan Modra",
+  "logo": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+  "logoEntity": {
+   "id": "da818ea9-79b3-4ad1-9408-da5b2d39f8e1",
+   "url": "https://cdn.handball.eliterro.sk/da818ea9-79b3-4ad1-9408-da5b2d39f8e1.webp",
+   "title": "666660",
+   "description": null,
+   "type": "image/webp",
+   "width": 100,
+   "height": 119
+  },
+  "type": "Local",
+  "id": 6568
+ },
+ "level": {
+  "id": 258,
+  "dateFrom": "2026-09-05T10:00:00Z",
+  "dateTo": "2026-10-18T14:46:51.27969Z",
+  "type": "Part",
+  "name": "Základná časť",
+  "logo": null,
+  "logoEntity": null,
+  "appearance": null,
+  "description": null,
+  "gender": null,
+  "category": null,
+  "subcategory": null,
+  "sport": "Handball",
+  "seasonId": 13,
+  "order": 4,
+  "gameType": null,
+  "viewType": "Detail",
+  "isActive": true,
+  "status": null,
+  "childLevels": [],
+  "regionLevel": null,
+  "leagueLevel": {
+   "id": 236,
+   "dateFrom": null,
+   "dateTo": null,
+   "type": "League",
+   "name": "1. liga st.dorastenci",
+   "logo": null,
+   "logoEntity": null,
+   "appearance": null,
+   "description": null,
+   "gender": null,
+   "category": "Starší dorast",
+   "subcategory": null,
+   "sport": "Handball",
+   "seasonId": 13,
+   "order": 12,
+   "gameType": null,
+   "viewType": "Section",
+   "isActive": false,
+   "status": null,
+   "childLevels": null,
+   "regionLevel": null,
+   "leagueLevel": null,
+   "parentLevel": null,
+   "place": null,
+   "statistics": []
+  },
+  "parentLevel": null,
+  "place": null,
+  "statistics": []
+ },
+ "place": null,
+ "showTime": true,
+ "resultData": [
+  {
+   "id": 36013,
+   "type": "text",
+   "name": "period-half",
+   "value": "16",
+   "participantId": 6568,
+   "matchPart": 1
+  },
+  {
+   "id": 36012,
+   "type": "text",
+   "name": "period-half",
+   "value": "25",
+   "participantId": 6569,
+   "matchPart": 1
+  },
+  {
+   "id": 36023,
+   "type": "text",
+   "name": "period-half",
+   "value": "19",
+   "participantId": 6568,
+   "matchPart": 2
+  },
+  {
+   "id": 36022,
+   "type": "text",
+   "name": "period-half",
+   "value": "24",
+   "participantId": 6569,
+   "matchPart": 2
+  },
+  {
+   "id": 36043,
+   "type": "text",
+   "name": "overtime",
+   "value": "0",
+   "participantId": 6568,
+   "matchPart": 3
+  },
+  {
+   "id": 36042,
+   "type": "text",
+   "name": "overtime",
+   "value": "0",
+   "participantId": 6569,
+   "matchPart": 3
+  }
+ ],
+ "additionalData": [
+  {
+   "id": 214533,
+   "type": "text",
+   "name": "match-number",
+   "value": "5A-40",
+   "priority": "Primary",
+   "group": null
+  }
+ ],
+ "matchStatistics": [],
+ "gallery": []
+}

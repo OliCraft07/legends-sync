@@ -1,0 +1,17 @@
+{
+  "name": "legends-szh-sync",
+  "version": "1.0.0",
+  "description": "Copies the Legends Šaľa matches and league tables from slovakhandball.sk into the club app's Firestore database.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "sync": "node src/cli.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
