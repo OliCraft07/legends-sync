@@ -6,6 +6,7 @@ import {
   DETAILS_VERSION,
   buildMatchDoc,
   buildStandingsDoc,
+  makeLogoFinder,
   matchKind,
   needsDetail,
   ourMatches,
@@ -367,5 +368,67 @@ describe('comparing documents', () => {
 
   test('a missing value and an undefined one are the same', () => {
     assert.equal(sameDoc({ a: 1 }, { a: 1, b: undefined }), true);
+  });
+});
+
+describe('logos', () => {
+  const known = [
+    ['MHK Piešťany A', 'https://cdn/piestany-a.webp'],
+    ['HK AGRO Topoľčany', 'https://cdn/agro.webp'],
+    ['MHC ŠTART  Nové Zámky A', 'https://cdn/start.webp'],
+  ];
+
+  test('the page gives every logo address, from the matches and from the table', () => {
+    const logos = level().logos;
+    assert.ok(logos.length > 8);
+    assert.ok(logos.every(([name, url]) => name && /^https:\/\/cdn\.handball\.eliterro\.sk\//.test(url)));
+    assert.ok(logos.some(([name]) => name === 'HáO TJ Slovan Modra'));
+  });
+
+  test('a team is found by its name, whatever the capitals and spaces', () => {
+    const find = makeLogoFinder(known);
+    assert.equal(find('hk agro  topoľčany'), 'https://cdn/agro.webp');
+    assert.equal(find('MHC ŠTART Nové Zámky A'), 'https://cdn/start.webp');
+  });
+
+  test('a club\'s second team and its plain name use the logo of the club\'s other team', () => {
+    const find = makeLogoFinder(known);
+    assert.equal(find('MHK Piešťany B'), 'https://cdn/piestany-a.webp');
+    assert.equal(find('MHK Piešťany'), 'https://cdn/piestany-a.webp');
+    assert.equal(find('MHC ŠTART Nové Zámky B'), 'https://cdn/start.webp');
+  });
+
+  test('a letter in the middle of a name is not a second-team mark', () => {
+    const find = makeLogoFinder([['SMF HK Žilina', 'https://cdn/zilina.webp']]);
+    assert.equal(find('SMF HK Žilina'), 'https://cdn/zilina.webp');
+    assert.equal(find('SMF HK'), null);
+  });
+
+  test('the logo the app already has is the last resort', () => {
+    const find = makeLogoFinder(known, [['TJ Sokol Cífer', 'https://old/cifer.png'], ['MHK Piešťany B', 'https://old/other.png']]);
+    assert.equal(find('TJ Sokol Cífer'), 'https://old/cifer.png');
+    // what the federation gives wins over what was stored
+    assert.equal(find('MHK Piešťany B'), 'https://cdn/piestany-a.webp');
+  });
+
+  test('a team nobody has a logo for gets none', () => {
+    assert.equal(makeLogoFinder(known)('HBC Trnava'), null);
+    assert.equal(makeLogoFinder([])('anything'), null);
+  });
+
+  test('the table and the matches take the found logo only when the team has none', () => {
+    const find = (name) => (name === 'Tatran Prešov' ? 'https://found/tatran.webp' : null);
+    const rows = clone(level().standings);
+    rows[2].logoUrl = null; // Tatran Prešov in the fixture
+    rows[1].logoUrl = null; // another team, nothing to find
+    const doc = buildStandingsDoc({ competition, rows, now: new Date(), findLogo: find });
+    assert.equal(doc.rows[2].logoUrl, 'https://found/tatran.webp');
+    assert.equal(doc.rows[1].logoUrl, null);
+    assert.match(doc.rows[0].logoUrl, /cdn\.handball\.eliterro\.sk/); // its own stays
+
+    const raw = clone(byId(level(), 90748)); // Tatran Prešov at home against us
+    raw.homeParticipant.logoEntity = null;
+    const match = buildMatchDoc({ competition, leagueName: 'x', id: 'x', raw, findLogo: find });
+    assert.equal(match.opponentLogoUrl, 'https://found/tatran.webp');
   });
 });

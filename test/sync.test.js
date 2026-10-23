@@ -65,6 +65,23 @@ describe('the everyday pass', () => {
     assert.equal(store.writes.length, writesBefore);
   });
 
+  test('details an earlier importer wrote are read once more, then left alone', async () => {
+    const store = new MemoryStore();
+    await baseline(clientWith(), store);
+    const id = 'szh-starsiDorastenci-k7';
+    const { importVersion, ...older } = store.matches.get(id).details;
+    store.matches.set(id, { ...store.matches.get(id), details: older });
+
+    const first = clientWith();
+    await baseline(first, store);
+    assert.deepEqual(first.requests.filter((r) => r.startsWith('match')), ['match 90785']);
+    assert.equal(store.matches.get(id).details.importVersion, 2);
+
+    const second = clientWith();
+    await baseline(second, store);
+    assert.deepEqual(second.requests, ['level 236/258']);
+  });
+
   test('a changed result is written and its page read again', async () => {
     const store = new MemoryStore();
     await baseline(clientWith(), store);
@@ -94,6 +111,52 @@ describe('the everyday pass', () => {
     assert.equal(store.matches.get(id).venue, 'Prešov, hala');
   });
 
+  test('a team without a logo in the table gets the one its matches (or another category) show', async () => {
+    const changed = fixture('level-236');
+    const board = changed.levelTabs[0].childLevels[0].scoreboards;
+    const zilina = board.find((s) => s.participants[0].id === 6576) ?? board[0];
+    const name = zilina.participants[0].name;
+    zilina.participants[0].logoEntity = null; // the table has none, the matches still do
+
+    const client = clientWith();
+    client.levels['236/258'] = levelHtml(changed);
+    const store = new MemoryStore();
+    await baseline(client, store);
+
+    const row = store.standings.get('starsiDorastenci').rows.find((r) => r.team === name.replace(/\s+/g, ' ').trim());
+    assert.ok(row, 'the team is in the table');
+    assert.match(row.logoUrl ?? '', /cdn\.handball\.eliterro\.sk/);
+  });
+
+  test('a logo missing in one category is taken from another category', async () => {
+    // The same team, "Tatran Prešov", is in the table of both categories. The first
+    // page has its logo everywhere, the second page nowhere.
+    const name = 'Tatran Prešov';
+    const withLogo = fixture('level-236');
+    const logo = withLogo.levelTabs[2].childLevels[0].matches
+      .flatMap((m) => [m.homeParticipant, m.visitingParticipant])
+      .find((team) => team.name === name).logoEntity.url;
+
+    const without = fixture('level-236');
+    const sides = ['homeParticipant', 'visitingParticipant'];
+    for (const tab of without.levelTabs.slice(1, 3)) {
+      for (const m of tab.childLevels[0].matches) for (const side of sides) if (m[side].name === name) m[side].logoEntity = null;
+    }
+    for (const s of without.levelTabs[0].childLevels[0].scoreboards) if (s.participants[0].name === name) s.participants[0].logoEntity = null;
+
+    const second = { category: 'muzi', level: 235, stage: 257, teamId: 6569, competitionName: '1. liga' };
+    const client = clientWith();
+    client.levels['235/257'] = levelHtml(without);
+    const store = new MemoryStore();
+    await baseline(client, store, { competitions: [competition, second] });
+
+    const row = store.standings.get('muzi').rows.find((r) => r.team === name);
+    assert.ok(row, 'the team is in the table');
+    assert.equal(row.logoUrl, logo);
+    // and as an opponent in a match of that category
+    const away = [...store.matches.values()].find((m) => m.category === 'muzi' && m.homeTeam === name);
+    assert.equal(away.opponentLogoUrl, logo);
+  });
   test('a category that cannot be read does not stop the others', async () => {
     const other = { category: 'muzi', level: 235, stage: 257, teamId: 6650 };
     const client = clientWith();
