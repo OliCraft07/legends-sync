@@ -3,6 +3,7 @@ import { describe, test } from 'node:test';
 
 import {
   buildDetails,
+  buildEvents,
   DETAILS_VERSION,
   buildMatchDoc,
   buildStandingsDoc,
@@ -291,6 +292,97 @@ describe('details of a played match', () => {
     const athlete = detail.homeParticipantLineup[1];
     athlete.matchStatistics = athlete.matchStatistics.map((s) => (s.name === 'penalty-d' ? { ...s, value: '1' } : s.name === 'penalty-dt' ? { ...s, value: '1' } : s));
     assert.equal(buildDetails(detail).homePlayers[1].redCards, 2);
+  });
+});
+
+describe('the timeline of a match', () => {
+  const athlete = (id, first, last, number) => ({ id, firstName: first, lastName: last, additionalData: [{ name: 'jersey-number', value: String(number) }] });
+  const event = (date, eventType, who, home, extra = {}) => ({
+    date,
+    eventType,
+    description: 'x',
+    matchPart: 1,
+    result: null,
+    athlete: who,
+    participant: { id: home ? 6569 : 6568 },
+    ...extra,
+  });
+
+  test('the first entries of the fixture, as the app reads them', () => {
+    const events = buildEvents(finished());
+    assert.equal(events.length, 3);
+    // The match began at 12:00:00; the first goal was at 12:00:49 and made it 1:0.
+    assert.deepEqual(events[0], { s: 49, k: 'goal', h: true, p: events[0].p, n: events[0].n, hs: 1, as: 0, pt: 1 });
+    assert.equal(events[1].k, 'twoMinutes');
+    assert.equal(events[1].s, 112);
+    assert.equal(events[1].hs, null);
+    assert.equal(events[2].k, 'missedSeven');
+    assert.equal(events[2].h, false);
+  });
+
+  test('every kind is named as the app names it, and the score is kept for goals only', () => {
+    const detail = clone(finished());
+    const a = athlete(1, 'Ján', 'Novák', 7);
+    detail.dateFrom = '2026-10-17T12:00:00Z';
+    detail.matchEvents = [
+      event('2026-10-17T12:01:00Z', 'goal', a, true, { result: '1:0' }),
+      event('2026-10-17T12:02:00Z', 'goal-penalty', a, false, { result: '1:1' }),
+      event('2026-10-17T12:03:00Z', 'missed-penalty', a, true, { result: '1:1' }),
+      event('2026-10-17T12:04:00Z', 'penalty', a, true, { result: '1:1' }),
+      event('2026-10-17T12:05:00Z', 'yellow-card', a, false, { result: '1:1' }),
+      event('2026-10-17T12:06:00Z', 'red-card', a, true, { result: '1:1' }),
+    ];
+    const events = buildEvents(detail);
+    assert.deepEqual(events.map((e) => e.k), ['goal', 'goalFromSeven', 'missedSeven', 'twoMinutes', 'yellowCard', 'redCard']);
+    assert.deepEqual(events.map((e) => e.s), [60, 120, 180, 240, 300, 360]);
+    assert.deepEqual(events.map((e) => e.hs), [1, 1, null, null, null, null]);
+    assert.deepEqual(events.map((e) => e.h), [true, false, true, true, false, true]);
+    assert.equal(events[0].p, 'Ján Novák');
+    assert.equal(events[0].n, 7);
+  });
+
+  test('oldest first, whatever order the site lists them in', () => {
+    const detail = clone(finished());
+    const a = athlete(1, 'A', 'B', 1);
+    detail.matchEvents = [
+      event('2026-10-17T12:10:00Z', 'goal', a, true, { result: '2:0' }),
+      event('2026-10-17T12:05:00Z', 'goal', a, true, { result: '1:0' }),
+    ];
+    assert.deepEqual(buildEvents(detail).map((e) => e.hs), [1, 2]);
+  });
+
+  test('the second half has its own half number', () => {
+    const detail = clone(finished());
+    detail.matchEvents = [event('2026-10-17T12:40:00Z', 'goal', athlete(1, 'A', 'B', 1), true, { result: '20:10', matchPart: 2 })];
+    assert.equal(buildEvents(detail)[0].pt, 2);
+  });
+
+  test('entries of a kind the app does not show, or without a player, are left out', () => {
+    const detail = clone(finished());
+    const a = athlete(1, 'A', 'B', 1);
+    detail.matchEvents = [
+      event('2026-10-17T12:01:00Z', 'timeout', a, true),
+      { ...event('2026-10-17T12:02:00Z', 'goal', a, true), athlete: null },
+      event('2026-10-17T12:03:00Z', 'goal', a, true, { result: '1:0' }),
+    ];
+    assert.equal(buildEvents(detail).length, 1);
+  });
+
+  test('an entry before the start does not give a negative time', () => {
+    const detail = clone(finished());
+    detail.matchEvents = [event('2026-10-17T11:59:00Z', 'goal', athlete(1, 'A', 'B', 1), true, { result: '1:0' })];
+    assert.equal(buildEvents(detail)[0].s, 0);
+  });
+
+  test('a match with no timeline has an empty one', () => {
+    const detail = clone(finished());
+    delete detail.matchEvents;
+    assert.deepEqual(buildEvents(detail), []);
+    assert.deepEqual(buildDetails(detail).events, []);
+  });
+
+  test('the details carry the timeline', () => {
+    assert.equal(buildDetails(finished()).events.length, 3);
   });
 });
 

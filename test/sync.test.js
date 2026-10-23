@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { buildMatchDoc, ourMatches } from '../src/convert.js';
+import { buildMatchDoc, DETAILS_VERSION, ourMatches } from '../src/convert.js';
 import { parseLevelPage } from '../src/parse.js';
 import { MemoryStore } from '../src/store.js';
 import { baselineDue, liveCandidates, runBaseline, runLive } from '../src/sync.js';
@@ -75,7 +75,7 @@ describe('the everyday pass', () => {
     const first = clientWith();
     await baseline(first, store);
     assert.deepEqual(first.requests.filter((r) => r.startsWith('match')), ['match 90785']);
-    assert.equal(store.matches.get(id).details.importVersion, 2);
+    assert.equal(store.matches.get(id).details.importVersion, DETAILS_VERSION);
 
     const second = clientWith();
     await baseline(second, store);
