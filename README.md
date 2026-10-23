@@ -45,7 +45,10 @@ Beží zadarmo na GitHub Actions, nie v telefóne.
   čo sa zmenilo, a pri odohratých zápasoch si prečíta ich vlastnú stránku (súpisky, góly, tresty, rozhodcovia).
   Beží v dni so zápasom a deň po ňom každú hodinu, inak každú 6. hodinu.
 - **Naživo** (`live`): od 10 minút pred výkopom do 150 minút po ňom číta stránku zápasu každú minútu, zapisuje skóre
-  a priebeh (appka ukáže červené **NAŽIVO**) a skončí po záverečnom hvizde.
+  a priebeh (appka ukáže červené **NAŽIVO** a v detaile zápasu **Priebeh zápasu**: každý gól, vylúčenie a kartu s časom) a skončí po záverečnom hvizde.
+- **Logá:** zväz niektorým tímom (hlavne druhým tímom klubu, napr. „MHK Piešťany B“) logo nedáva. Program ho vtedy nájde inde:
+  to isté logo v inej kategórii, alebo logo druhého tímu toho istého klubu („MHK Piešťany A“), alebo to, čo už appka mala.
+  Ak logo neexistuje nikde (napr. „TJ Sokol Cífer“), appka ukáže kruh so začiatočnými písmenami.
 - Zväzu to robí záťaž ako jeden čitateľ: pauza 1,5 s medzi stránkami, jeden dotaz za minútu na zápas.
 - **Čo sa nikdy nemení:** hala (miesto), ktorú zadal správca, a čas výkopu, ktorý zadal správca, kým ho zväz nemá.
   Zápasy pridané ručne (iné ID než `szh-...`) sa nedotknú. Nič sa nemaže.
