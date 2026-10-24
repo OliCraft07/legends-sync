@@ -8,6 +8,7 @@ import {
   buildMatchDoc,
   buildStandingsDoc,
   makeLogoFinder,
+  kindFor,
   matchKind,
   needsDetail,
   ourMatches,
@@ -213,15 +214,16 @@ describe('the match as the app stores it', () => {
 
   test('a match being played is marked live, with the score so far', () => {
     const raw = clone(finished());
-    raw.state = 'InProgress';
+    raw.state = 'Finished'; // the federation says so from a few minutes after the start
     raw.homeParticipantResult = '12';
     raw.visitingParticipantResult = '10';
-    const doc = build(raw, { detail: raw });
+    const now = new Date(new Date(raw.dateFrom).getTime() + 30 * 60_000);
+    const doc = build(raw, { detail: raw, now });
     assert.equal(doc.live, true);
     assert.equal(doc.homeScore, 12);
     assert.equal(doc.awayScore, 10);
     assert.ok(doc.details.homePlayers.length > 0);
-    assert.equal(matchKind(raw), 'live');
+    assert.equal(matchKind(raw, now), 'live');
   });
 
   test('names are tidied', () => {
@@ -386,6 +388,58 @@ describe('the timeline of a match', () => {
   });
 });
 
+describe('is a match upcoming, live or finished', () => {
+  const kickoff = new Date('2026-10-24T11:00:00Z');
+  const at = (minutes) => new Date(kickoff.getTime() + minutes * 60_000);
+  const match = (overrides = {}) => ({
+    state: 'Upcoming',
+    dateFrom: kickoff.toISOString(),
+    homeParticipantResult: null,
+    visitingParticipantResult: null,
+    matchEvents: [],
+    ...overrides,
+  });
+  const played = (overrides = {}) => match({ state: 'Finished', homeParticipantResult: '2', visitingParticipantResult: '1', ...overrides });
+
+  test('nothing recorded: upcoming, whatever the federation calls it', () => {
+    assert.equal(matchKind(match(), at(-60)), 'upcoming');
+    assert.equal(matchKind(match(), at(30)), 'upcoming');
+    // The federation lists matches that have not been played as "Finished", with no result.
+    assert.equal(matchKind(match({ state: 'Finished' }), at(30)), 'upcoming');
+    assert.equal(matchKind(match({ state: 'Finished' }), at(60 * 24 * 3)), 'upcoming');
+  });
+
+  test('something recorded soon after the kickoff: live, also when the federation says "Finished"', () => {
+    // On 24 October the federation called a match "Finished" six minutes after the start.
+    assert.equal(matchKind(played(), at(6)), 'live');
+    assert.equal(matchKind(played(), at(60)), 'live');
+    assert.equal(matchKind(played({ state: 'Upcoming' }), at(10)), 'live');
+  });
+
+  test('events alone are something recorded', () => {
+    assert.equal(matchKind(match({ matchEvents: [{ eventType: 'goal' }] }), at(10)), 'live');
+  });
+
+  test('something recorded and a long time since the kickoff: finished', () => {
+    assert.equal(matchKind(played(), at(99)), 'live');
+    assert.equal(matchKind(played(), at(100)), 'finished');
+    assert.equal(matchKind(played(), at(60 * 24 * 7)), 'finished');
+  });
+
+  test('data before the kickoff does not make a match live', () => {
+    assert.equal(matchKind(played(), at(-5)), 'upcoming');
+  });
+
+  test('a match the live loop has seen end stays finished, until the score changes', () => {
+    const stored = { live: false, homeScore: 2, awayScore: 1, details: { events: [{}, {}] } };
+    assert.equal(kindFor(played(), stored, at(70)), 'finished');
+    assert.equal(kindFor(played({ homeParticipantResult: '3' }), stored, at(70)), 'live');
+    assert.equal(kindFor(played({ matchEvents: [{}, {}, {}] }), stored, at(70)), 'live');
+    assert.equal(kindFor(played(), { ...stored, live: true }, at(70)), 'live');
+    assert.equal(kindFor(played(), null, at(70)), 'live');
+  });
+});
+
 describe('deciding what to download', () => {
   const page = level();
   const raw = byId(page, 90785);
@@ -420,8 +474,16 @@ describe('deciding what to download', () => {
     assert.equal(needsDetail(empty, null), false);
   });
 
-  test('a match in progress is always downloaded', () => {
-    assert.equal(needsDetail({ ...raw, state: 'InProgress' }, stored()), true);
+  test('a match in progress is downloaded again each time', () => {
+    const now = new Date(new Date(raw.dateFrom).getTime() + 30 * 60_000);
+    assert.equal(needsDetail(raw, { ...stored(), live: true }, now), true);
+    assert.equal(needsDetail(raw, { ...stored(), homeScore: 40 }, now), true);
+    assert.equal(needsDetail(raw, null, now), true);
+  });
+
+  test('a match the live loop has seen end is not downloaded again while it has the same result', () => {
+    const now = new Date(new Date(raw.dateFrom).getTime() + 70 * 60_000);
+    assert.equal(needsDetail(raw, stored(), now), false);
   });
 });
 

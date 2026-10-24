@@ -4,7 +4,7 @@ import { describe, test } from 'node:test';
 import { buildMatchDoc, DETAILS_VERSION, ourMatches } from '../src/convert.js';
 import { parseLevelPage } from '../src/parse.js';
 import { MemoryStore } from '../src/store.js';
-import { baselineDue, liveCandidates, runBaseline, runLive } from '../src/sync.js';
+import { baselineDue, liveCandidates, runBaseline, runDaemon, runLive } from '../src/sync.js';
 import { clone, competition, FakeClient, fixture, levelHtml, matchHtml } from './helpers.js';
 
 const NOW = new Date('2026-10-23T10:00:00Z');
@@ -297,47 +297,69 @@ describe('which matches are followed live', () => {
   });
 });
 
+// How the federation's pages behaved on 24 October 2026 (see the log of that day): a match is
+// "Upcoming" with nothing on it for the first few minutes, then "Finished" for the rest, also
+// while it is being played, and the goals come in as they are scored. This builds such a match.
+const KICKOFF = '2026-10-24T11:00:00Z';
+const kickoffMs = Date.parse(KICKOFF);
+const MATCH_ID = 90748; // Tatran Prešov (home) against our team
+
+/** A match, as the federation's page shows it [minutes] after the kickoff. */
+function federationAfter(minutes, { lastGoal = 62, everyMinutes = 2 } = {}) {
+  const athlete = fixture('match-finished').homeParticipantLineup[0];
+  const homeId = rawById(MATCH_ID).homeParticipant.id;
+  const goals = [];
+  for (let m = 6; m <= Math.min(minutes, lastGoal); m += everyMinutes) {
+    if (m > 28 && m < 42) continue; // half-time
+    goals.push(m);
+  }
+  const matchEvents = goals.map((m, i) => ({
+    date: new Date(kickoffMs + m * 60_000).toISOString(),
+    eventType: 'goal',
+    description: 's1',
+    matchPart: m < 30 ? 1 : 2,
+    result: `${i + 1}:0`,
+    athlete,
+    participant: { id: homeId },
+  }));
+  const started = minutes >= 6;
+  return {
+    state: started ? 'Finished' : 'Upcoming',
+    homeParticipantResult: started ? String(goals.length) : null,
+    visitingParticipantResult: started ? '0' : null,
+    matchEvents,
+  };
+}
+
+/** A clock the tests move by "sleeping". */
+function clock(startIso) {
+  let t = Date.parse(startIso);
+  return { now: () => new Date(t), sleep: async (ms) => { t += ms; }, at: () => t, minutes: () => (t - kickoffMs) / 60_000 };
+}
+
 describe('following a match live', () => {
-  const KICKOFF = '2026-10-24T11:00:00Z';
   const ID = 'szh-starsiDorastenci-k8';
 
-  /** A clock the tests move by "sleeping". */
-  function clock(start) {
-    let t = new Date(start).getTime();
-    return { now: () => new Date(t), sleep: async (ms) => { t += ms; }, at: () => t };
-  }
-
-  function setUp(startIso, script) {
+  function setUp(startIso, page = (minutes) => federationAfter(minutes)) {
     const time = clock(startIso);
-    const stored = buildMatchDoc({
-      competition,
-      leagueName: '1. liga st.dorastenci',
-      id: ID,
-      raw: rawById(90748),
-    });
+    const stored = buildMatchDoc({ competition, leagueName: '1. liga st.dorastenci', id: ID, raw: rawById(MATCH_ID), now: time.now() });
     const store = new MemoryStore({ matches: [{ id: ID, doc: stored }] });
+    const written = [];
+    const save = store.saveMatches.bind(store);
+    store.saveMatches = async (entries) => {
+      for (const { doc } of entries) written.push({ minutes: time.minutes(), live: doc.live, score: `${doc.homeScore}:${doc.awayScore}`, events: doc.details?.events.length ?? 0 });
+      await save(entries);
+    };
     const matches = new Map([[ID, stored]]);
-    let polls = 0;
-    const client = new FakeClient({
-      matches: {
-        90748: () => {
-          const step = script(time.at(), polls++);
-          return matchHtml(detailOf(90748, step));
-        },
-      },
-    });
-    return { time, store, matches, client, polls: () => polls };
+    const client = new FakeClient({ matches: { [MATCH_ID]: () => matchHtml(detailOf(MATCH_ID, page(time.minutes()))) } });
+    return { time, store, matches, client, written };
   }
 
   const run = (env, extra = {}) =>
     runLive({ client: env.client, store: env.store, matches: env.matches, now: env.time.now, sleep: env.time.sleep, ...extra });
 
-  test('waits for the kickoff, follows the score and stops at the final whistle', async () => {
-    const env = setUp('2026-10-24T10:30:00Z', (t, poll) => {
-      const minutesIn = (t - new Date(KICKOFF).getTime()) / 60000;
-      if (minutesIn < 70) return { state: 'InProgress', homeParticipantResult: String(Math.max(0, Math.floor(minutesIn / 5))), visitingParticipantResult: '1' };
-      return { state: 'Finished', homeParticipantResult: '15', visitingParticipantResult: '12' };
-    });
+  test('writes the goals as they come, through the half-time break, and ends the match after the quiet that follows the last one', async () => {
+    const env = setUp('2026-10-24T10:30:00Z');
 
     const summary = await run(env);
 
@@ -345,72 +367,110 @@ describe('following a match live', () => {
     assert.equal(summary.finished, 1);
     const final = env.store.matches.get(ID);
     assert.equal(final.live, false);
-    assert.equal(final.homeScore, 15);
-    assert.equal(final.awayScore, 12);
+    assert.equal(final.homeScore, 23);
+    assert.equal(final.awayScore, 0);
+    assert.equal(final.details.events.length, 23);
     assert.equal(final.details.hasFullRoster, true);
-    // It began at kickoff minus ten minutes, not before.
-    assert.ok(env.polls() >= 70, `polled ${env.polls()} times`);
-    assert.ok(env.polls() <= 85, `polled ${env.polls()} times`);
-    // And it did not keep going after the end.
-    assert.equal(env.client.requests.at(-1), 'match 90748');
-    assert.equal(env.matches.get(ID).homeScore, 15);
+
+    // The first thing written is a goal, six minutes in, not "the match is over".
+    assert.equal(env.written[0].live, true);
+    assert.ok(env.written[0].minutes >= 6 && env.written[0].minutes < 8, `first write at ${env.written[0].minutes}`);
+    // Everything before the end says "in progress": the federation's "Finished" did not end it,
+    // and neither did the half-time break (nothing happens between minute 28 and 42).
+    const beforeEnd = env.written.slice(0, -1);
+    assert.ok(beforeEnd.length >= 20);
+    assert.ok(beforeEnd.every((w) => w.live === true), 'all in progress until the end');
+    // It ended after the last goal (minute 62) and the quiet of six minutes.
+    const last = env.written.at(-1);
+    assert.equal(last.live, false);
+    assert.ok(last.minutes >= 68 && last.minutes <= 70, `ended at ${last.minutes}`);
+    assert.ok(env.time.minutes() <= 71, `stopped at ${env.time.minutes()}`);
   });
 
-  test('writes only when something changed, and marks the match live meanwhile', async () => {
-    const seen = [];
-    const env = setUp('2026-10-24T11:00:00Z', (t, poll) => {
-      if (poll < 3) return { state: 'InProgress', homeParticipantResult: '1', visitingParticipantResult: '0' };
-      if (poll < 5) return { state: 'InProgress', homeParticipantResult: '2', visitingParticipantResult: '0' };
-      return { state: 'Finished', homeParticipantResult: '2', visitingParticipantResult: '0' };
+  test('a match the federation lists as "Finished" without a result is never taken for over', async () => {
+    // Like the two youth matches with the wrong date.
+    const env = setUp('2026-10-24T10:30:00Z', () => ({ state: 'Finished', homeParticipantResult: null, visitingParticipantResult: null, matchEvents: [] }));
+
+    const summary = await run(env, { maxMinutes: 60 });
+
+    assert.equal(summary.finished, 0);
+    assert.equal(env.written.length, 0);
+    assert.equal(env.store.matches.get(ID).homeScore, null);
+    assert.ok(summary.polls >= 30, `polled ${summary.polls} times`);
+  });
+
+  test('a long pause in the first half does not end it, because the second half has not begun', async () => {
+    // A goal at minute 6, then nothing for 25 minutes (a long time-out), then the second half.
+    const env = setUp('2026-10-24T10:55:00Z', (minutes) => federationAfter(minutes, { lastGoal: 50, everyMinutes: 10 }));
+
+    await run(env);
+
+    const first = env.written.filter((w) => w.minutes < 28);
+    assert.ok(first.length >= 1);
+    assert.ok(first.every((w) => w.live === true));
+  });
+
+  test('ends a match that is still recording after the longest a match can take', async () => {
+    const env = setUp('2026-10-24T10:55:00Z', (minutes) => federationAfter(minutes, { lastGoal: 500 }));
+
+    await run(env);
+
+    assert.equal(env.store.matches.get(ID).live, false);
+    assert.ok(env.time.minutes() >= 100 && env.time.minutes() <= 101, `stopped at ${env.time.minutes()}`);
+  });
+
+  test('a goal after the match was thought to be over makes it live again at the next everyday pass', async () => {
+    const env = setUp('2026-10-24T10:30:00Z');
+    await run(env);
+    const ended = env.store.matches.get(ID);
+    assert.equal(ended.live, false);
+
+    // A late goal: the level page now shows 24:0 at minute 75.
+    const raw = { ...rawById(MATCH_ID), state: 'Finished', homeParticipantResult: '24', visitingParticipantResult: '0' };
+    const doc = buildMatchDoc({
+      competition,
+      leagueName: 'x',
+      id: ID,
+      raw,
+      existing: ended,
+      now: new Date(kickoffMs + 75 * 60_000),
     });
-    const origSave = env.store.saveMatches.bind(env.store);
-    env.store.saveMatches = async (entries) => {
-      seen.push(entries[0].doc.live);
-      await origSave(entries);
-    };
+    assert.equal(doc.live, true);
+    assert.equal(doc.homeScore, 24);
+  });
+
+  test('writes only when something changed', async () => {
+    const env = setUp('2026-10-24T10:55:00Z', (minutes) => federationAfter(minutes, { lastGoal: 14 }));
 
     const summary = await run(env);
 
-    // 1:0 (live), 2:0 (live), final (not live): three writes for six polls.
-    assert.equal(summary.polls, 6);
-    assert.equal(summary.writes, 3);
-    assert.deepEqual(seen, [true, true, false]);
-  });
-
-  test('keeps the round label the everyday pass gave', async () => {
-    const env = setUp('2026-10-24T11:00:00Z', () => ({ state: 'Finished', homeParticipantResult: '3', visitingParticipantResult: '2' }));
-    await run(env);
-    assert.equal(env.store.matches.get(ID).competition, '1. liga · 8. kolo');
-  });
-
-  test('stops after the time it is allowed to run', async () => {
-    const env = setUp('2026-10-24T11:00:00Z', () => ({ state: 'InProgress', homeParticipantResult: '1', visitingParticipantResult: '1' }));
-    const summary = await run(env, { maxMinutes: 10 });
-    assert.equal(summary.finished, 0);
-    assert.ok(summary.polls >= 9 && summary.polls <= 12, `polled ${summary.polls} times`);
+    // Goals at 6, 8, 10, 12, 14: five writes, then the end (the quiet is in the first half, so the
+    // match is only over after the 100 minutes).
+    assert.equal(env.written.filter((w) => w.live === true).length, 5);
+    assert.ok(summary.polls > 90);
   });
 
   test('gives up after ten rounds in which nothing could be downloaded', async () => {
     const env = setUp('2026-10-24T11:00:00Z', () => ({}));
-    env.client.matches[90748] = new Error('Server slovakhandball.sk vrátil chybu 500.');
+    env.client.matches[MATCH_ID] = new Error('Server slovakhandball.sk vrátil chybu 500.');
     const summary = await run(env);
     assert.ok(summary.errors.some((e) => /Desať kôl/.test(e)));
-    assert.ok(env.client.requests.length <= 12);
+    assert.ok(env.client.requests.length <= 40);
   });
 
   test('a failed poll in between does not end it', async () => {
-    const env = setUp('2026-10-24T11:00:00Z', (t, poll) => {
-      if (poll === 1) throw new Error('Server slovakhandball.sk neodpovedá.');
-      if (poll < 4) return { state: 'InProgress', homeParticipantResult: '1', visitingParticipantResult: '0' };
-      return { state: 'Finished', homeParticipantResult: '1', visitingParticipantResult: '0' };
+    const env = setUp('2026-10-24T10:55:00Z', (minutes) => {
+      if (Math.round(minutes) === 12) throw new Error('Server slovakhandball.sk neodpovedá.');
+      return federationAfter(minutes);
     });
     const summary = await run(env);
     assert.equal(summary.finished, 1);
     assert.equal(summary.errors.length, 1);
+    assert.equal(env.store.matches.get(ID).live, false);
   });
 
   test('does nothing when no match is near', async () => {
-    const env = setUp('2026-10-23T08:00:00Z', () => ({ state: 'Finished' }));
+    const env = setUp('2026-10-23T08:00:00Z');
     const summary = await run(env);
     assert.equal(summary.polls, 0);
     assert.deepEqual(env.client.requests, []);
@@ -418,7 +478,98 @@ describe('following a match live', () => {
 
   test('knows the matches ourMatches finds are the ones to follow', () => {
     const doc = buildMatchDoc({ competition, leagueName: 'x', id: ID, raw: ourMatches(competition, page().matches).find((m) => m.id === ID).raw });
-    assert.equal(doc.szhId, 90748);
+    assert.equal(doc.szhId, MATCH_ID);
     assert.equal(liveCandidates(new Map([[ID, doc]]), new Date('2026-10-24T11:30:00Z')).size, 1);
+  });
+});
+
+describe('a whole match day in one run', () => {
+  const ID = 'szh-starsiDorastenci-k8';
+
+  /** The competition page as it is [minutes] after the kickoff (the federation's lists show the result so far). */
+  function levelAt(minutes) {
+    const level = fixture('level-236');
+    const now = federationAfter(minutes);
+    for (const tab of level.levelTabs.slice(1, 3)) {
+      for (const m of tab.childLevels[0].matches) {
+        if (m.id !== MATCH_ID) continue;
+        m.state = now.state;
+        m.homeParticipantResult = now.homeParticipantResult;
+        m.visitingParticipantResult = now.visitingParticipantResult;
+      }
+    }
+    return levelHtml(level);
+  }
+
+  function setUp(startIso, { store = new MemoryStore() } = {}) {
+    const time = clock(startIso);
+    const matches = {};
+    for (const id of [90785, 90843, 90910]) matches[id] = matchHtml(detailOf(id));
+    matches[MATCH_ID] = () => matchHtml(detailOf(MATCH_ID, federationAfter(time.minutes())));
+    const client = new FakeClient({ levels: { '236/258': () => levelAt(time.minutes()) }, matches });
+    return { time, store, client };
+  }
+
+  const run = (env, extra = {}) =>
+    runDaemon({ client: env.client, store: env.store, now: env.time.now, sleep: env.time.sleep, competitions: [competition], ...extra });
+
+  test('waits for the match, follows it, does the everyday pass in between, and ends when the match is over', async () => {
+    const env = setUp('2026-10-24T10:20:00Z');
+
+    const summary = await run(env);
+
+    assert.deepEqual(summary.baselineErrors, []);
+    assert.equal(summary.continueNeeded, false);
+    assert.ok(summary.baselines >= 3, `${summary.baselines} everyday passes`);
+    assert.ok(summary.polls > 60);
+    assert.equal(summary.finished, 1);
+    const doc = env.store.matches.get(ID);
+    assert.equal(doc.live, false);
+    assert.equal(doc.homeScore, 23);
+    assert.equal(doc.details.events.length, 23);
+    // The everyday pass seeing a match in progress does not end or spoil it.
+    assert.ok(env.time.minutes() <= 71, `stopped at ${env.time.minutes()}`);
+    // It did not start following before the kickoff minus ten minutes.
+    const firstPoll = env.client.requests.indexOf(`match ${MATCH_ID}`);
+    assert.ok(firstPoll >= 0);
+  });
+
+  test('keeps its place all day: the first run that starts is enough', async () => {
+    // Nothing started the run for hours (the timer is unreliable); it starts 3 hours before the match.
+    const env = setUp('2026-10-24T08:00:00Z');
+    const summary = await run(env);
+    assert.equal(summary.finished, 1);
+    assert.equal(env.store.matches.get(ID).live, false);
+    assert.ok(summary.baselines >= 4);
+  });
+
+  test('a day with no match more than ends at once', async () => {
+    const quiet = new MemoryStore({
+      matches: [{ id: ID, doc: buildMatchDoc({ competition, leagueName: 'x', id: ID, raw: rawById(MATCH_ID), now: new Date('2026-10-23T09:00:00Z') }) }],
+    });
+    const env = setUp('2026-10-23T09:07:00Z', { store: quiet }); // 11:07 on Friday: not the sixth hour, no match today or yesterday
+    const summary = await run(env);
+    assert.equal(summary.baselines, 0);
+    assert.deepEqual(env.client.requests, []);
+    assert.equal(summary.continueNeeded, false);
+  });
+
+  test('when the run runs out of time with the match day still going, it says another run is needed', async () => {
+    const env = setUp('2026-10-24T08:00:00Z');
+    const summary = await run(env, { maxMinutes: 60 });
+    assert.equal(summary.continueNeeded, true);
+    assert.equal(summary.finished, 0);
+  });
+
+  test('a match day whose match has not been played (wrong date on the site) does not keep the run for ever', async () => {
+    const time = clock('2026-10-24T10:30:00Z');
+    const client = new FakeClient({
+      levels: { '236/258': () => levelHtml() },
+      matches: { 90785: matchHtml(detailOf(90785)), 90843: matchHtml(detailOf(90843)), 90910: matchHtml(detailOf(90910)), [MATCH_ID]: () => matchHtml(detailOf(MATCH_ID, { state: 'Finished', homeParticipantResult: null, visitingParticipantResult: null, matchEvents: [] })) },
+    });
+    const summary = await runDaemon({ client, store: new MemoryStore(), now: time.now, sleep: time.sleep, competitions: [competition] });
+    // It follows the match for the window after its kickoff and then lets the day go.
+    assert.equal(summary.continueNeeded, false);
+    assert.ok(time.minutes() <= 150 + 11, `stopped at ${time.minutes()}`);
   });
 });
