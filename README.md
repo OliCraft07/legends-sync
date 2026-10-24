@@ -41,18 +41,29 @@ Beží zadarmo na GitHub Actions, nie v telefóne.
 
 ## Ako to funguje
 
-- **Hlavné sťahovanie** (`baseline`): z každej súťaže stiahne jednu stránku (všetky zápasy a tabuľka, 1 až 3 MB), zapíše,
-  čo sa zmenilo, a pri odohratých zápasoch si prečíta ich vlastnú stránku (súpisky, góly, tresty, rozhodcovia).
-  Beží v dni so zápasom a deň po ňom každú hodinu, inak každú 6. hodinu.
-- **Naživo** (`live`): od 10 minút pred výkopom do 150 minút po ňom číta stránku zápasu každú minútu, zapisuje skóre
-  a priebeh (appka ukáže červené **NAŽIVO** a v detaile zápasu **Priebeh zápasu**: každý gól, vylúčenie a kartu s časom) a skončí po záverečnom hvizde.
-- **Logá:** zväz niektorým tímom (hlavne druhým tímom klubu, napr. „MHK Piešťany B“) logo nedáva. Program ho vtedy nájde inde:
-  to isté logo v inej kategórii, alebo logo druhého tímu toho istého klubu („MHK Piešťany A“), alebo to, čo už appka mala.
-  Ak logo neexistuje nikde (napr. „TJ Sokol Cífer“), appka ukáže kruh so začiatočnými písmenami.
+- **Celý zápasový deň v jednom behu.** GitHub spúšťa časované behy nespoľahlivo (v sobotu 24. 10. nebol medzi 7:41 a 12:49
+  žiadny), preto sa na ne nedá spoliehať minútu po minúte. V zápasový deň preto prvý beh, ktorý sa spustí, zostane
+  celý deň: robí hlavné sťahovanie, sleduje zápasy a čaká na ďalšie. Skončí, keď v ten deň nie je žiadny zápas
+  a keď po 5,5 hodine deň stále trvá, spustí ďalší beh sám. Časovače sú dva za hodinu (`:07` a `:37`), aby sa
+  zvýšila šanca, že aspoň jeden z nich GitHub nevynechá.
+- **Hlavné sťahovanie** (v behu každých 45 minút, v zápasový deň a deň po ňom, inak každú 6. hodinu): z každej súťaže
+  stiahne jednu stránku (všetky zápasy a tabuľka, 1 až 3 MB), zapíše, čo sa zmenilo, a pri odohratých zápasoch si prečíta
+  ich vlastnú stránku (súpisky, góly, tresty, rozhodcovia, priebeh).
+- **Naživo**: od 10 minút pred výkopom číta stránku zápasu každú minútu, zapisuje skóre a priebeh (appka ukáže
+  červené **PREBIEHA** a v detaile zápasu **Priebeh zápasu**: každý gól, vylúčenie a kartu s časom).
+- **Kedy zápas skončil.** Federácia nemá stav „prebieha“: zápas je „Upcoming“ a po pár minútach „Finished“,
+  aj keď sa ešte hrá, a nehrané zápasy môžu byť „Finished“ bez výsledku. Preto sa stav nepoužíva. Zápas
+  prebieha, keď má zapísaný výsledok alebo udalosti a od výkopu ubehlo menej ako 100 minút. Skončil, keď sa
+  začal druhý polčas, ubehlo aspoň 30 minút a 6 minút sa nič nestalo (prestávka medzi polčasmi ho neukončí),
+  alebo keď ubehlo 100 minút.
 - Zväzu to robí záťaž ako jeden čitateľ: pauza 1,5 s medzi stránkami, jeden dotaz za minútu na zápas.
 - **Čo sa nikdy nemení:** hala (miesto), ktorú zadal správca, a čas výkopu, ktorý zadal správca, kým ho zväz nemá.
   Zápasy pridané ručne (iné ID než `szh-...`) sa nedotknú. Nič sa nemaže.
-
+- **Logá:** zväz niektorým tímom (hlavne druhým tímom klubu, napr. „MHK Piešťany B“) logo nedáva. Program ho vtedy nájde inde:
+  to isté logo v inej kategórii, alebo logo druhého tímu toho istého klubu („MHK Piešťany A“), alebo to, čo už appka mala.
+  Ak logo neexistuje nikde (napr. „TJ Sokol Cífer“), appka ukáže kruh so začiatočnými písmenami.
+- **Výpis behu** má pri každom stiahnutí zápasu jeden riadok (stav, skóre, počet udalostí, minúty od výkopu, ticho),
+  takže sa dá spätne vidieť, čo federácia vracala.
 ## Nová sezóna
 
 Zväz každú sezónu vytvorí nové stránky súťaží s novými číslami. V `src/config.js` treba prepísať
@@ -70,6 +81,7 @@ Zväz každú sezónu vytvorí nové stránky súťaží s novými číslami. V 
 - Beh sa ukončí chybou (červený krúžok v Actions) a GitHub pošle e-mail. Najčastejšie zväz zmenil web: testy
   alebo výpis povedia „zväz asi zmenil web“. Pošlite ten výpis a opravím parser.
 - GitHub vypne plánované behy po 60 dňoch bez aktivity v repozitári. Príde e-mail; v Actions ho zapnete jedným klikom.
+- **Zápas, ktorý sa nesleduje:** ak GitHub pred zápasom žiadny beh nespustí, spustite ho ručne asi 30 minút pred výkopom (Actions, Run workflow, mode = auto, dry_run odškrtnúť). Zostane až do konca zápasového dňa.
 - Do pol hodiny po zápase sa výsledok objaví aj bez toho, aby ste čokoľvek robili.
 
 ## Pre vývojára
