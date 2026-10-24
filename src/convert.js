@@ -1,4 +1,4 @@
-import { OUR_TEAM_NAME, STATE_FINISHED, STATE_UPCOMING } from './config.js';
+import { OUR_TEAM_NAME, OVER_AFTER_MINUTES } from './config.js';
 import { slovakDay, slovakMidnight } from './time.js';
 
 /** Squeezes whitespace (the site has names like "Viliam  MACKO"). */
@@ -10,11 +10,27 @@ function intOrNull(value) {
   return Number.isInteger(number) ? number : null;
 }
 
-/** 'finished', 'upcoming', or 'live' for every other state (a match in progress). */
-export function matchKind(raw) {
-  if (raw.state === STATE_FINISHED) return 'finished';
-  if (raw.state === STATE_UPCOMING) return 'upcoming';
-  return 'live';
+/** Whether the federation has put a result or any events on a match. */
+export function hasMatchData(raw) {
+  const result = intOrNull(raw.homeParticipantResult) !== null && intOrNull(raw.visitingParticipantResult) !== null;
+  return result || (raw.matchEvents?.length ?? 0) > 0;
+}
+
+/**
+ * 'upcoming', 'live' or 'finished'. The federation's own `state` cannot be used: it
+ * has no "in progress" (a match is "Upcoming" until a few minutes after the
+ * start and "Finished" from then on, also while it is being played, and
+ * matches not played yet can be "Finished" with no result at all). So:
+ *   - nothing recorded yet (no result, no events), or before the kickoff: upcoming,
+ *   - something recorded and the match started less than [OVER_AFTER_MINUTES] ago: live,
+ *   - something recorded and the match started long enough ago: finished.
+ * The loop that follows a match live ends it sooner, when nothing has happened for a while.
+ */
+export function matchKind(raw, now = new Date()) {
+  if (!hasMatchData(raw)) return 'upcoming';
+  const elapsedMinutes = (now.getTime() - new Date(raw.dateFrom).getTime()) / 60_000;
+  if (elapsedMinutes < 0) return 'upcoming';
+  return elapsedMinutes >= OVER_AFTER_MINUTES ? 'finished' : 'live';
 }
 
 export function involvesTeam(raw, teamId) {
@@ -230,9 +246,20 @@ export function makeLogoFinder(known, stored = []) {
   return (name) => exact.get(key(name)) ?? byClub.get(club(name)) ?? keptByApp.get(key(name)) ?? null;
 }
 
-export function buildMatchDoc({ competition, leagueName, id, raw, detail = null, existing = null, findLogo = null }) {
+export function buildMatchDoc({
+  competition,
+  leagueName,
+  id,
+  raw,
+  detail = null,
+  existing = null,
+  findLogo = null,
+  now = new Date(),
+  finished = false,
+}) {
   const source = detail ?? raw;
-  const kind = matchKind(source);
+  // [finished]: the loop that follows a match live has seen it end.
+  const kind = finished && hasMatchData(source) ? 'finished' : kindFor(source, existing, now);
   const homeIsOurs = source.homeParticipant.id === competition.teamId;
   const opponent = homeIsOurs ? source.visitingParticipant : source.homeParticipant;
   const opponentName = tidy(opponent.name);
@@ -262,9 +289,9 @@ export function buildMatchDoc({ competition, leagueName, id, raw, detail = null,
     }
   }
 
-  // A match that is over but has no result (the federation lists some like that) has nothing to detail.
+  // A match with nothing recorded (also one the federation calls "Finished" before it is played) has nothing to detail.
   let details = null;
-  if (kind === 'live' || (kind === 'finished' && homeScore !== null)) {
+  if (kind !== 'upcoming') {
     details = detail ? buildDetails(detail) : existing?.details ?? null;
   }
 
@@ -292,16 +319,38 @@ export function buildMatchDoc({ competition, leagueName, id, raw, detail = null,
 }
 
 /**
- * Whether a finished match needs its own page downloaded: nothing was stored
- * yet, or the result or the live state changed since.
+ * The kind of a match as the stored copy and the time say. A match the live loop has
+ * already seen end stays finished, with the same result, even if only [OVER_AFTER_MINUTES]
+ * have not yet passed; a new goal after that makes it live again.
  */
-export function needsDetail(raw, existing) {
-  if (matchKind(raw) === 'upcoming') return false;
-  if (matchKind(raw) === 'finished' && intOrNull(raw.homeParticipantResult) === null) return false;
+export function kindFor(raw, existing, now) {
+  const kind = matchKind(raw, now);
+  if (
+    kind === 'live' &&
+    existing &&
+    existing.live === false &&
+    existing.details &&
+    existing.homeScore !== null &&
+    existing.homeScore === intOrNull(raw.homeParticipantResult) &&
+    existing.awayScore === intOrNull(raw.visitingParticipantResult) &&
+    (raw.matchEvents === undefined || (existing.details.events?.length ?? 0) >= raw.matchEvents.length)
+  ) {
+    return 'finished';
+  }
+  return kind;
+}
+
+/**
+ * Whether a match needs its own page downloaded: nothing was stored yet, or the
+ * result or the live state changed since.
+ */
+export function needsDetail(raw, existing, now = new Date()) {
+  const kind = kindFor(raw, existing, now);
+  if (kind === 'upcoming') return false;
   if (!existing || !existing.details || existing.details.hasFullRoster !== true) return true;
   if (existing.details.importVersion !== DETAILS_VERSION) return true;
   if (existing.live === true) return true;
-  if (matchKind(raw) === 'finished') {
+  if (kind === 'finished') {
     return (
       existing.homeScore !== intOrNull(raw.homeParticipantResult) ||
       existing.awayScore !== intOrNull(raw.visitingParticipantResult)

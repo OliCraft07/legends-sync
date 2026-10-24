@@ -1,5 +1,13 @@
-import { competitions as defaultCompetitions, LIVE_LEAD_MINUTES, LIVE_TRAIL_MINUTES, OUR_TEAM_NAME } from './config.js';
-import { buildMatchDoc, buildStandingsDoc, makeLogoFinder, matchKind, needsDetail, ourMatches, sameDoc } from './convert.js';
+import {
+  competitions as defaultCompetitions,
+  LIVE_LEAD_MINUTES,
+  LIVE_TRAIL_MINUTES,
+  MIN_PLAYED_MINUTES,
+  OUR_TEAM_NAME,
+  OVER_AFTER_MINUTES,
+  QUIET_MINUTES,
+} from './config.js';
+import { buildMatchDoc, buildStandingsDoc, hasMatchData, makeLogoFinder, needsDetail, ourMatches, sameDoc } from './convert.js';
 import { parseLevelPage, parseMatchPage } from './parse.js';
 import { slovakDay, slovakHour } from './time.js';
 
@@ -8,9 +16,11 @@ const MINUTE = 60_000;
 /** A league table is written again at least this often, so its "last import" date stays recent. */
 const STANDINGS_REFRESH_MS = 12 * 60 * MINUTE;
 
+const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * The everyday pass: downloads each category's competition page (all its matches
- * and the table), and writes what changed. A finished match whose own page has
+ * and the table), and writes what changed. A played match whose own page has
  * not been read yet (or whose result changed) has that page downloaded too, for
  * the rosters, goals, sanctions and referees.
  *
@@ -49,15 +59,16 @@ export async function runBaseline({ client, store, now = () => new Date(), log =
 
     for (const { id, raw } of ours) {
       const before = existing.get(id) ?? null;
+      const at = now();
       let detail = null;
-      if (needsDetail(raw, before)) {
+      if (needsDetail(raw, before, at)) {
         try {
           detail = parseMatchPage(await client.matchPage(raw.id));
         } catch (error) {
           summary.warnings.push(`${competition.category}: detail zápasu ${raw.id}: ${error.message}`);
         }
       }
-      const doc = buildMatchDoc({ competition, leagueName: page.leagueName, id, raw, detail, existing: before, findLogo });
+      const doc = buildMatchDoc({ competition, leagueName: page.leagueName, id, raw, detail, existing: before, findLogo, now: at });
       if (!before) {
         summary.added++;
       } else if (!sameDoc(doc, before)) {
@@ -128,17 +139,104 @@ export function liveCandidates(matches, at, lookaheadMinutes = 75) {
   return result;
 }
 
+/** Whether a match is being followed right now (from a little before the kickoff). */
+function isActive(doc, at) {
+  return doc.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE <= at.getTime();
+}
+
+/** Our team's id in a match: the side of the stored document that is ours. */
+function teamIdOf(detail, doc) {
+  const home = doc.homeTeam === OUR_TEAM_NAME;
+  return home ? detail.homeParticipant.id : detail.visitingParticipant.id;
+}
+
+/**
+ * Reads each of the [active] matches once from its own page and writes what changed.
+ * A match has ended when something is recorded and either [OVER_AFTER_MINUTES] have
+ * passed since the kickoff, or its second half has begun and nothing has happened for
+ * [QUIET_MINUTES] (not before [MIN_PLAYED_MINUTES], so the half-time break cannot end it).
+ * [watch] remembers, between calls, when each match last changed.
+ *
+ * Returns how many of the matches could not be read, and which ended.
+ */
+export async function liveTick({ client, store, matches, active, watch, now, log, summary }) {
+  let failed = 0;
+  const ended = [];
+
+  for (const [id, doc] of active) {
+    try {
+      const detail = parseMatchPage(await client.matchPage(doc.szhId));
+      summary.polls++;
+      const at = now();
+
+      const events = detail.matchEvents ?? [];
+      const key = `${detail.homeParticipantResult}:${detail.visitingParticipantResult}/${events.length}`;
+      const seen = watch.get(id) ?? { key: null, changedAt: at };
+      if (seen.key !== key) {
+        seen.key = key;
+        seen.changedAt = at;
+      }
+      watch.set(id, seen);
+
+      const elapsed = (at.getTime() - new Date(detail.dateFrom).getTime()) / MINUTE;
+      const quietFor = (at.getTime() - seen.changedAt.getTime()) / MINUTE;
+      const secondHalf = events.some((e) => e.matchPart >= 2);
+      const over =
+        hasMatchData(detail) &&
+        (elapsed >= OVER_AFTER_MINUTES || (secondHalf && elapsed >= MIN_PLAYED_MINUTES && quietFor >= QUIET_MINUTES));
+
+      const competition = { category: doc.category, teamId: teamIdOf(detail, doc), competitionName: null };
+      const next = buildMatchDoc({
+        competition,
+        leagueName: detail.level?.leagueLevel?.name ?? '',
+        id,
+        raw: detail,
+        detail,
+        existing: doc,
+        now: at,
+        finished: over,
+      });
+      // The label ("1. liga · 8. kolo") stays as the everyday pass wrote it.
+      next.competition = doc.competition || next.competition;
+
+      log(
+        `${id}: stav ${detail.state}, ${detail.homeParticipantResult ?? '-'}:${detail.visitingParticipantResult ?? '-'}, ` +
+          `${events.length} udalostí, ${elapsed.toFixed(0)} min od výkopu, ticho ${quietFor.toFixed(0)} min` +
+          `${over ? ' -> koniec' : ''}`,
+      );
+
+      if (!sameDoc(next, doc)) {
+        await store.saveMatches([{ id, doc: next }]);
+        summary.writes++;
+        log(`${id}: zapísané ${next.homeScore ?? '-'}:${next.awayScore ?? '-'}${next.live ? ' (prebieha)' : ''}`);
+      }
+      matches.set(id, next);
+      if (over) {
+        ended.push(id);
+        summary.finished++;
+        log(`${id}: zápas skončil`);
+      }
+    } catch (error) {
+      failed++;
+      summary.errors.push(`${id}: ${error.message}`);
+      log(`${id}: chyba (${error.message})`);
+    }
+  }
+
+  return { failed, ended };
+}
+
 /**
  * Follows the matches that are being played (or are about to be) and writes the
- * score, the events and the rosters every [intervalMs]. Each match is read from
- * its own page. Ends when all of them are finished, or after [maxMinutes].
+ * score, the events and the rosters every [intervalMs]. Ends when all of them are
+ * over, or after [maxMinutes].
  */
 export async function runLive({
   client,
   store,
   matches,
   now = () => new Date(),
-  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  sleep = defaultSleep,
   log = () => {},
   maxMinutes = 170,
   intervalMs = MINUTE,
@@ -147,10 +245,11 @@ export async function runLive({
   const startedAt = now().getTime();
   const pending = liveCandidates(matches, now(), lookaheadMinutes);
   const summary = { polls: 0, writes: 0, finished: 0, errors: [] };
+  const watch = new Map();
   let failuresInARow = 0;
 
   while (pending.size > 0 && now().getTime() - startedAt < maxMinutes * MINUTE) {
-    const active = [...pending].filter(([, doc]) => doc.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE <= now().getTime());
+    const active = [...pending].filter(([, doc]) => isActive(doc, now()));
 
     if (active.length === 0) {
       const earliest = Math.min(...[...pending.values()].map((d) => d.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE));
@@ -160,44 +259,11 @@ export async function runLive({
       continue;
     }
 
-    let failedThisPass = 0;
-    for (const [id, doc] of active) {
-      try {
-        const detail = parseMatchPage(await client.matchPage(doc.szhId));
-        summary.polls++;
-        const competition = { category: doc.category, teamId: teamIdOf(detail, doc), competitionName: null };
-        const next = buildMatchDoc({
-          competition,
-          leagueName: detail.level?.leagueLevel?.name ?? '',
-          id,
-          raw: detail,
-          detail,
-          existing: doc,
-        });
-        // The label ("1. liga · 8. kolo") stays as the everyday pass wrote it.
-        next.competition = doc.competition || next.competition;
+    const { failed, ended } = await liveTick({ client, store, matches, active, watch, now, log, summary });
+    for (const id of ended) pending.delete(id);
+    for (const [id] of pending) pending.set(id, matches.get(id));
 
-        if (!sameDoc(next, doc)) {
-          await store.saveMatches([{ id, doc: next }]);
-          matches.set(id, next);
-          summary.writes++;
-          log(`${id}: ${next.homeScore ?? '-'}:${next.awayScore ?? '-'}${next.live ? ' (naživo)' : ''}`);
-        }
-        if (matchKind(detail) === 'finished') {
-          pending.delete(id);
-          summary.finished++;
-          log(`${id}: zápas skončil`);
-        } else {
-          pending.set(id, next);
-        }
-      } catch (error) {
-        failedThisPass++;
-        summary.errors.push(`${id}: ${error.message}`);
-        log(`${id}: chyba (${error.message})`);
-      }
-    }
-
-    failuresInARow = failedThisPass === active.length ? failuresInARow + 1 : 0;
+    failuresInARow = failed === active.length ? failuresInARow + 1 : 0;
     if (failuresInARow >= 10) {
       summary.errors.push('Desať kôl po sebe sa nič nepodarilo stiahnuť, končím.');
       break;
@@ -208,8 +274,91 @@ export async function runLive({
   return summary;
 }
 
-/** Our team's id in a match: the side of the stored document that is ours. */
-function teamIdOf(detail, doc) {
-  const home = doc.homeTeam === OUR_TEAM_NAME;
-  return home ? detail.homeParticipant.id : detail.visitingParticipant.id;
+/** Whether a match is still to come today, or is being played (or has just been, and its end is not written). */
+function matchesLeftToday(matches, at) {
+  const today = slovakDay(at);
+  for (const doc of matches.values()) {
+    if (doc.timeUnknown || !doc.szhId) continue;
+    const kickoff = doc.dateTime.getTime();
+    const ongoing = at.getTime() <= kickoff + LIVE_TRAIL_MINUTES * MINUTE && !(isDone(doc) && at.getTime() > kickoff);
+    const comingToday = kickoff > at.getTime() && slovakDay(doc.dateTime) === today;
+    if (comingToday || (at.getTime() >= kickoff && ongoing)) return true;
+  }
+  return false;
+}
+
+/**
+ * The whole match day in one run: it does the everyday pass whenever it is due (at
+ * most every [baselineEveryMinutes]), follows every match that is on or about to be
+ * every [intervalMs], and waits in between. It ends when no match is left today, or
+ * after [maxMinutes] (then `continueNeeded` is true and the caller should start another run).
+ *
+ * One long run, and not many short ones started by a timer, because GitHub starts timed
+ * runs late or not at all: on a match day the first run that does start stays until the
+ * last match is over.
+ */
+export async function runDaemon({
+  client,
+  store,
+  now = () => new Date(),
+  sleep = defaultSleep,
+  log = () => {},
+  maxMinutes = 330,
+  intervalMs = MINUTE,
+  baselineEveryMinutes = 45,
+  competitions = defaultCompetitions,
+}) {
+  const startedAt = now().getTime();
+  let matches = await store.loadMatches();
+  const watch = new Map();
+  const summary = { baselines: 0, polls: 0, writes: 0, finished: 0, errors: [], baselineErrors: [], warnings: [], continueNeeded: false };
+  let lastBaselineAt = null;
+  let failuresInARow = 0;
+
+  for (;;) {
+    const at = now();
+
+    if (baselineDue(matches, at) && (lastBaselineAt === null || at.getTime() - lastBaselineAt.getTime() >= baselineEveryMinutes * MINUTE)) {
+      const result = await runBaseline({ client, store, now, log, competitions });
+      matches = result.matches;
+      lastBaselineAt = at;
+      summary.baselines++;
+      summary.warnings.push(...result.summary.warnings);
+      summary.baselineErrors.push(...result.summary.errors);
+      const s = result.summary;
+      log(`Hlavné sťahovanie: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky: ${s.standingsWritten}`);
+    }
+
+    if (!matchesLeftToday(matches, now())) break;
+    if (now().getTime() - startedAt >= maxMinutes * MINUTE) {
+      summary.continueNeeded = true;
+      break;
+    }
+
+    const active = [...liveCandidates(matches, now(), LIVE_LEAD_MINUTES)].filter(([, doc]) => isActive(doc, now()));
+    if (active.length > 0) {
+      const { failed } = await liveTick({ client, store, matches, active, watch, now, log, summary });
+      failuresInARow = failed === active.length ? failuresInARow + 1 : 0;
+      if (failuresInARow >= 10) {
+        summary.errors.push('Desať kôl po sebe sa nič nepodarilo stiahnuť, končím.');
+        break;
+      }
+      await sleep(intervalMs);
+      continue;
+    }
+
+    // Nothing to follow yet: wait for the next kickoff or the next everyday pass.
+    const nextKickoff = Math.min(
+      Infinity,
+      ...[...matches.values()]
+        .filter((d) => !d.timeUnknown && d.szhId && d.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE > now().getTime())
+        .map((d) => d.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE),
+    );
+    const nextBaseline = lastBaselineAt === null ? now().getTime() : lastBaselineAt.getTime() + baselineEveryMinutes * MINUTE;
+    const wait = Math.min(Math.max(Math.min(nextKickoff, nextBaseline) - now().getTime(), 30_000), 5 * MINUTE);
+    log(`Čakám ${Math.round(wait / 1000)} s (najbližší zápas alebo ďalšie hlavné sťahovanie)`);
+    await sleep(wait);
+  }
+
+  return summary;
 }

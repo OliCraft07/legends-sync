@@ -22,9 +22,20 @@ export const competitions = [
   { category: 'muzi', level: 235, stage: 257, teamId: 6650, competitionName: '1. liga' },
 ];
 
-/** How the match states of the site are read. Anything else counts as "in progress". */
-export const STATE_FINISHED = 'Finished';
-export const STATE_UPCOMING = 'Upcoming';
+/**
+ * The federation's "state" of a match says nothing reliable about whether it is being played
+ * (see matchKind), so a match counts as over when something has been recorded and
+ * this many minutes have passed since the kickoff (a league match with breaks and time-outs
+ * takes up to about 95 minutes)...
+ */
+export const OVER_AFTER_MINUTES = 100;
+
+/**
+ * ...or, when the second half has begun, nothing has happened for this long and at least
+ * MIN_PLAYED_MINUTES have passed since the kickoff (the half-time break must not end a match).
+ */
+export const QUIET_MINUTES = 6;
+export const MIN_PLAYED_MINUTES = 30;
 
 /** Live polling: from this long before the kickoff... */
 export const LIVE_LEAD_MINUTES = 10;

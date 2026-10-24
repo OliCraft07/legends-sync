@@ -1,14 +1,15 @@
+import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
 import { SiteClient } from './http.js';
 import { MemoryStore, ReadOnlyStore } from './store.js';
-import { baselineDue, liveCandidates, runBaseline, runLive } from './sync.js';
+import { liveCandidates, runBaseline, runDaemon, runLive } from './sync.js';
 
 const { values: args } = parseArgs({
   options: {
     mode: { type: 'string', default: 'auto' },
     'dry-run': { type: 'boolean', default: false },
-    'max-minutes': { type: 'string', default: '170' },
+    'max-minutes': { type: 'string', default: '330' },
     interval: { type: 'string', default: '60' },
   },
 });
@@ -35,24 +36,42 @@ async function main() {
 
   const store = await makeStore();
   const client = new SiteClient();
-  let matches = await store.loadMatches();
+  const matches = await store.loadMatches();
   log(`V databáze je ${matches.size} zápasov zo SZH. Režim: ${mode}${args['dry-run'] ? ' (skúška)' : ''}`);
 
   let failed = false;
 
-  if (mode === 'baseline' || (mode === 'auto' && baselineDue(matches, new Date()))) {
+  if (mode === 'auto') {
+    // The whole match day in one run (see runDaemon): the everyday pass when it is due,
+    // every match that is on followed every minute, and a wait in between.
+    const summary = await runDaemon({
+      client,
+      store,
+      log,
+      maxMinutes: Number(args['max-minutes']),
+      intervalMs: Number(args.interval) * 1000,
+    });
+    log(
+      `Hotovo: ${summary.baselines} hlavných sťahovaní, ${summary.polls} stiahnutí zápasov naživo, ` +
+        `${summary.writes} zápisov, ${summary.finished} skončených zápasov`,
+    );
+    for (const warning of summary.warnings) log(`Upozornenie: ${warning}`);
+    for (const error of summary.baselineErrors) log(`CHYBA: ${error}`);
+    for (const error of summary.errors.slice(-5)) log(`Chyba pri sledovaní: ${error}`);
+    failed ||= summary.baselineErrors.length > 0;
+    if (summary.continueNeeded) {
+      // The workflow starts the next run when it finds this file.
+      writeFileSync('continue.flag', '1');
+      log('Zápasový deň ešte neskončil: spustí sa ďalší beh.');
+    }
+  } else if (mode === 'baseline') {
     const result = await runBaseline({ client, store, log });
-    matches = result.matches;
     const s = result.summary;
     log(`Zápasy: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky zapísané: ${s.standingsWritten}`);
     for (const warning of s.warnings) log(`Upozornenie: ${warning}`);
     for (const error of s.errors) log(`CHYBA: ${error}`);
     failed ||= s.errors.length > 0;
-  } else if (mode === 'auto') {
-    log('Dnes nie je zápasový deň a nie je 6. hodina: preskakujem hlavné sťahovanie.');
-  }
-
-  if (mode === 'live' || mode === 'auto') {
+  } else {
     const candidates = liveCandidates(matches, new Date());
     if (candidates.size === 0) {
       log('Žiadny zápas sa nehrá ani sa čoskoro nezačne.');
