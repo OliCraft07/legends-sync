@@ -1,10 +1,13 @@
-name: Zápasy zo SZH
+﻿name: Zápasy zo SZH
 
-# Každú hodinu: hlavné sťahovanie zápasov a tabuliek (v zápasové dni; inak každú 6. hodinu)
-# a sledovanie zápasov, ktoré sa práve hrajú, každú minútu. Beh ukončí posledný zápas.
+# GitHub spúšťa časované behy nespoľahlivo (niekedy s päťhodinovou dierou), preto je tu viac
+# časovačov za hodinu. V zápasový deň prvý beh, ktorý sa spustí, zostane celý deň: robí hlavné
+# sťahovanie zápasov a tabuliek, sleduje zápasy, ktoré sa hrajú, každú minútu a skončí po
+# poslednom zápase. Ak deň trvá dlhšie ako beh (6 hodín), spustí ďalší sám.
 on:
   schedule:
     - cron: '7 * * * *'
+    - cron: '37 * * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -24,11 +27,13 @@ concurrency:
 
 permissions:
   contents: read
+  # Na spustenie ďalšieho behu, keď zápasový deň trvá dlhšie ako jeden beh.
+  actions: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 200
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -47,4 +52,11 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           MODE: ${{ inputs.mode || 'auto' }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
-        run: node src/cli.js --mode "$MODE" $DRY_RUN --max-minutes 170
+        run: node src/cli.js --mode "$MODE" $DRY_RUN --max-minutes 330
+
+      # Zápasový deň ešte neskončil, ale beh vyčerpal čas: spustí sa ďalší (ostrý, nie skúška).
+      - name: Pokračovanie
+        if: ${{ hashFiles('continue.flag') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run szh-sync.yml --ref "$GITHUB_REF_NAME" -f mode=auto -f dry_run=false
