@@ -311,7 +311,7 @@ export async function runDaemon({
   const startedAt = now().getTime();
   let matches = await store.loadMatches();
   const watch = new Map();
-  const summary = { baselines: 0, polls: 0, writes: 0, finished: 0, errors: [], baselineErrors: [], warnings: [], continueNeeded: false };
+  const summary = { baselines: 0, polls: 0, writes: 0, finished: 0, errors: [], baselineErrors: [], baselinesWithErrors: 0, warnings: [], continueNeeded: false };
   let lastBaselineAt = null;
   let failuresInARow = 0;
 
@@ -323,8 +323,11 @@ export async function runDaemon({
       matches = result.matches;
       lastBaselineAt = at;
       summary.baselines++;
-      summary.warnings.push(...result.summary.warnings);
+      for (const warning of result.summary.warnings) {
+        if (!summary.warnings.includes(warning)) summary.warnings.push(warning);
+      }
       summary.baselineErrors.push(...result.summary.errors);
+      if (result.summary.errors.length > 0) summary.baselinesWithErrors++;
       const s = result.summary;
       log(`Hlavné sťahovanie: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky: ${s.standingsWritten}`);
     }

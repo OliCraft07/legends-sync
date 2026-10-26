@@ -31,11 +31,16 @@ export const competitions = [
 export const OVER_AFTER_MINUTES = 100;
 
 /**
+ * The federation's scorers send what they recorded in batches about every 5 minutes (seen on
+ * 25 October), so a pause shorter than that is normal; the match is over only after a longer one.
  * ...or, when the second half has begun, nothing has happened for this long and at least
  * MIN_PLAYED_MINUTES have passed since the kickoff (the half-time break must not end a match).
  */
-export const QUIET_MINUTES = 6;
+export const QUIET_MINUTES = 8;
 export const MIN_PLAYED_MINUTES = 30;
+
+/** A match whose events appear up to this many minutes before the scheduled kickoff has simply started early. */
+export const EARLY_START_MINUTES = 15;
 
 /** Live polling: from this long before the kickoff... */
 export const LIVE_LEAD_MINUTES = 10;

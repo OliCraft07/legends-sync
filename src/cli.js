@@ -58,7 +58,9 @@ async function main() {
     for (const warning of summary.warnings) log(`Upozornenie: ${warning}`);
     for (const error of summary.baselineErrors) log(`CHYBA: ${error}`);
     for (const error of summary.errors.slice(-5)) log(`Chyba pri sledovaní: ${error}`);
-    failed ||= summary.baselineErrors.length > 0;
+    // A hiccup of the federation's site in one of the many passes of a long day is not a failure of
+    // the run (it would also stop the next run from being started); only when every pass failed.
+    failed ||= summary.baselines > 0 && summary.baselinesWithErrors === summary.baselines;
     if (summary.continueNeeded) {
       // The workflow starts the next run when it finds this file.
       writeFileSync('continue.flag', '1');

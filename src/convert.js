@@ -1,4 +1,4 @@
-import { OUR_TEAM_NAME, OVER_AFTER_MINUTES } from './config.js';
+import { EARLY_START_MINUTES, OUR_TEAM_NAME, OVER_AFTER_MINUTES } from './config.js';
 import { slovakDay, slovakMidnight } from './time.js';
 
 /** Squeezes whitespace (the site has names like "Viliam  MACKO"). */
@@ -22,14 +22,16 @@ export function hasMatchData(raw) {
  * start and "Finished" from then on, also while it is being played, and
  * matches not played yet can be "Finished" with no result at all). So:
  *   - nothing recorded yet (no result, no events), or before the kickoff: upcoming,
- *   - something recorded and the match started less than [OVER_AFTER_MINUTES] ago: live,
+ *   - something recorded and the match started (or is about to, by a few minutes) less than
+ *     [OVER_AFTER_MINUTES] ago: live,
  *   - something recorded and the match started long enough ago: finished.
  * The loop that follows a match live ends it sooner, when nothing has happened for a while.
  */
 export function matchKind(raw, now = new Date()) {
   if (!hasMatchData(raw)) return 'upcoming';
   const elapsedMinutes = (now.getTime() - new Date(raw.dateFrom).getTime()) / 60_000;
-  if (elapsedMinutes < 0) return 'upcoming';
+  // (Matches do start a few minutes before the scheduled time.)
+  if (elapsedMinutes < -EARLY_START_MINUTES) return 'upcoming';
   return elapsedMinutes >= OVER_AFTER_MINUTES ? 'finished' : 'live';
 }
 
