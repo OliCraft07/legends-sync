@@ -426,8 +426,15 @@ describe('is a match upcoming, live or finished', () => {
     assert.equal(matchKind(played(), at(60 * 24 * 7)), 'finished');
   });
 
-  test('data before the kickoff does not make a match live', () => {
-    assert.equal(matchKind(played(), at(-5)), 'upcoming');
+  test('a match that starts a few minutes early is live at once', () => {
+    // On 25 October the first goal was recorded three minutes before the scheduled kickoff.
+    assert.equal(matchKind(played(), at(-3)), 'live');
+    assert.equal(matchKind(played(), at(-15)), 'live');
+  });
+
+  test('data long before the kickoff does not make a match live', () => {
+    assert.equal(matchKind(played(), at(-16)), 'upcoming');
+    assert.equal(matchKind(played(), at(-120)), 'upcoming');
   });
 
   test('a match the live loop has seen end stays finished, until the score changes', () => {

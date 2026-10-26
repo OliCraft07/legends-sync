@@ -380,13 +380,63 @@ describe('following a match live', () => {
     const beforeEnd = env.written.slice(0, -1);
     assert.ok(beforeEnd.length >= 20);
     assert.ok(beforeEnd.every((w) => w.live === true), 'all in progress until the end');
-    // It ended after the last goal (minute 62) and the quiet of six minutes.
+    // It ended after the last goal (minute 62) and the quiet of eight minutes.
     const last = env.written.at(-1);
     assert.equal(last.live, false);
-    assert.ok(last.minutes >= 68 && last.minutes <= 70, `ended at ${last.minutes}`);
-    assert.ok(env.time.minutes() <= 71, `stopped at ${env.time.minutes()}`);
+    assert.ok(last.minutes >= 70 && last.minutes <= 72, `ended at ${last.minutes}`);
+    assert.ok(env.time.minutes() <= 73, `stopped at ${env.time.minutes()}`);
   });
 
+  test('replay of the men\'s match on 25 October, as its log shows: batches every five minutes, a ten-minute half-time gap', async () => {
+    // [minutes after the scheduled kickoff, score, events recorded so far], as the federation's page showed them.
+    const batches = [
+      [-3, '0:1', 1], [2, '3:2', 7], [7, '4:6', 13], [12, '9:9', 22], [17, '12:11', 28], [22, '14:14', 35],
+      [27, '16:17', 42], [32, '17:20', 47], [43, '18:22', 50], [48, '23:24', 59], [53, '28:28', 69],
+      [58, '31:30', 75], [63, '34:34', 83], [68, '37:37', 89], [73, '42:40', 97], [78, '43:42', 102],
+    ];
+    const athlete = fixture('match-finished').homeParticipantLineup[0];
+    const homeId = rawById(MATCH_ID).homeParticipant.id;
+    const replay = (minutes) => {
+      const batch = [...batches].reverse().find(([from]) => minutes >= from);
+      if (!batch) return { state: 'Upcoming', homeParticipantResult: null, visitingParticipantResult: null, matchEvents: [] };
+      const [from, score, count] = batch;
+      const [home, away] = score.split(':');
+      return {
+        state: from < 2 ? 'Upcoming' : 'Finished',
+        homeParticipantResult: home,
+        visitingParticipantResult: away,
+        matchEvents: Array.from({ length: count }, (_, i) => ({
+          date: new Date(kickoffMs + i * 45_000).toISOString(),
+          eventType: 'goal',
+          description: 's1',
+          matchPart: i < 47 ? 1 : 2,
+          result: `${i + 1}:0`,
+          athlete,
+          participant: { id: homeId },
+        })),
+      };
+    };
+    const env = setUp('2026-10-24T10:50:00Z', replay);
+
+    const summary = await run(env);
+
+    assert.deepEqual(summary.errors, []);
+    assert.equal(summary.finished, 1);
+    const final = env.store.matches.get(ID);
+    assert.equal(final.live, false);
+    assert.equal(`${final.homeScore}:${final.awayScore}`, '43:42');
+    assert.equal(final.details.events.length, 102);
+    // One write for each batch, all "in progress", the first before the scheduled kickoff (it began early)...
+    const live = env.written.filter((w) => w.live === true);
+    assert.equal(live.length, 16);
+    assert.ok(live[0].minutes < 0, `first write at ${live[0].minutes}`);
+    // ...the ten-minute half-time gap (minutes 32 to 43) and the five-minute gaps did not end it...
+    assert.ok(env.written.slice(0, -1).every((w) => w.live === true));
+    // ...and it ended eight minutes after the last batch.
+    const last = env.written.at(-1);
+    assert.equal(last.live, false);
+    assert.ok(last.minutes >= 86 && last.minutes <= 88, `ended at ${last.minutes}`);
+  });
   test('a match the federation lists as "Finished" without a result is never taken for over', async () => {
     // Like the two youth matches with the wrong date.
     const env = setUp('2026-10-24T10:30:00Z', () => ({ state: 'Finished', homeParticipantResult: null, visitingParticipantResult: null, matchEvents: [] }));
@@ -397,6 +447,16 @@ describe('following a match live', () => {
     assert.equal(env.written.length, 0);
     assert.equal(env.store.matches.get(ID).homeScore, null);
     assert.ok(summary.polls >= 30, `polled ${summary.polls} times`);
+  });
+
+  test('the usual five-minute gap between the federation\'s batches does not end a match', async () => {
+    // Goals only every 5 minutes: nothing is quiet for the 8 minutes it takes to end a match.
+    const env = setUp('2026-10-24T10:55:00Z', (minutes) => federationAfter(minutes, { lastGoal: 62, everyMinutes: 5 }));
+    await run(env);
+    const second = env.written.filter((w) => w.minutes >= 42 && w.minutes <= 62);
+    assert.ok(second.length >= 3);
+    assert.ok(second.every((w) => w.live === true), 'still in progress between the batches');
+    assert.equal(env.store.matches.get(ID).live, false);
   });
 
   test('a long pause in the first half does not end it, because the second half has not begun', async () => {
@@ -528,7 +588,7 @@ describe('a whole match day in one run', () => {
     assert.equal(doc.homeScore, 23);
     assert.equal(doc.details.events.length, 23);
     // The everyday pass seeing a match in progress does not end or spoil it.
-    assert.ok(env.time.minutes() <= 71, `stopped at ${env.time.minutes()}`);
+    assert.ok(env.time.minutes() <= 73, `stopped at ${env.time.minutes()}`);
     // It did not start following before the kickoff minus ten minutes.
     const firstPoll = env.client.requests.indexOf(`match ${MATCH_ID}`);
     assert.ok(firstPoll >= 0);
@@ -541,6 +601,26 @@ describe('a whole match day in one run', () => {
     assert.equal(summary.finished, 1);
     assert.equal(env.store.matches.get(ID).live, false);
     assert.ok(summary.baselines >= 4);
+  });
+
+  test('one failed everyday pass in the day does not spoil the day, and is counted', async () => {
+    const env = setUp('2026-10-24T08:00:00Z');
+    const original = env.client.levels['236/258'];
+    let calls = 0;
+    // The competition page fails only the second time it is asked for (the second everyday pass).
+    env.client.levels['236/258'] = () => {
+      calls++;
+      if (calls === 2) throw new Error('Server slovakhandball.sk vrátil chybu 503.');
+      return original();
+    };
+
+    const summary = await run(env);
+
+    assert.equal(summary.baselineErrors.length, 1);
+    assert.equal(summary.baselinesWithErrors, 1);
+    assert.ok(summary.baselines >= 3, 'the day went on');
+    assert.equal(env.store.matches.get(ID).live, false);
+    assert.equal(summary.finished, 1);
   });
 
   test('a day with no match more than ends at once', async () => {
