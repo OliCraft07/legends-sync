@@ -1,4 +1,4 @@
-﻿name: Zápasy zo SZH
+name: Zápasy zo SZH
 
 # GitHub spúšťa časované behy nespoľahlivo (niekedy s päťhodinovou dierou), preto je tu viac
 # časovačov za hodinu. V zápasový deň prvý beh, ktorý sa spustí, zostane celý deň: robí hlavné
@@ -56,7 +56,7 @@ jobs:
 
       # Zápasový deň ešte neskončil, ale beh vyčerpal čas: spustí sa ďalší (ostrý, nie skúška).
       - name: Pokračovanie
-        if: ${{ hashFiles('continue.flag') != '' }}
+        if: ${{ !cancelled() && hashFiles('continue.flag') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run szh-sync.yml --ref "$GITHUB_REF_NAME" -f mode=auto -f dry_run=false
