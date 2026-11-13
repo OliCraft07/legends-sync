@@ -7,6 +7,7 @@ import {
   DETAILS_VERSION,
   buildMatchDoc,
   buildStandingsDoc,
+  isByeTeam,
   makeLogoFinder,
   kindFor,
   matchKind,
@@ -515,6 +516,34 @@ describe('league tables', () => {
 
   test('no rows before the season starts', () => {
     assert.deepEqual(buildStandingsDoc({ competition, rows: [], now }).rows, []);
+  });
+
+  test('"Voľno" is no team: it is left out and the places after it move up', () => {
+    for (const name of ['Voľno', 'Volno', 'VOĽNO', ' voľno ']) {
+      const rows = clone(level().standings);
+      rows[2].team = name;
+      const doc = buildStandingsDoc({ competition, rows, now });
+      assert.equal(doc.rows.length, 5, name);
+      assert.ok(doc.rows.every((r) => !isByeTeam(r.team)), name);
+      assert.deepEqual(doc.rows.map((r) => r.position), [1, 2, 3, 4, 5], name);
+      // Ours is still ours, one place higher.
+      assert.deepEqual(doc.rows.filter((r) => r.isOurs).map((r) => r.position), [4], name);
+    }
+  });
+
+  test('"Voľno" at the bottom changes no place', () => {
+    const rows = clone(level().standings);
+    rows[5].team = 'Voľno';
+    const doc = buildStandingsDoc({ competition, rows, now });
+    assert.deepEqual(doc.rows.map((r) => r.position), [1, 2, 3, 4, 5]);
+  });
+
+  test('a team that merely has "voľno" in its name is a team', () => {
+    assert.equal(isByeTeam('Voľno'), true);
+    assert.equal(isByeTeam('Volno'), true);
+    assert.equal(isByeTeam('TJ Voľno Bratislava'), false);
+    assert.equal(isByeTeam(''), false);
+    assert.equal(isByeTeam(null), false);
   });
 });
 

@@ -361,13 +361,28 @@ export function needsDetail(raw, existing, now = new Date()) {
   return true;
 }
 
+/** The federation's "Voľno" (a round off), written with or without the accents. It is no team. */
+export function isByeTeam(name) {
+  const plain = String(name ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z]/g, '');
+  return plain === 'volno';
+}
+
 /** A league table as the app stores it. */
 export function buildStandingsDoc({ competition, rows, now, findLogo = null }) {
+  const valid = rows.filter(
+    (r) => Number.isInteger(r.position) && r.team && r.played !== null && r.goalsFor !== null && r.goalsAgainst !== null && r.points !== null,
+  );
+  // "Voľno" is not a team: it is left out, and the places after it move up.
+  const byes = valid.filter((r) => isByeTeam(r.team)).map((r) => r.position);
   return {
     category: competition.category,
     updatedAt: now,
-    rows: rows
-      .filter((r) => Number.isInteger(r.position) && r.team && r.played !== null && r.goalsFor !== null && r.goalsAgainst !== null && r.points !== null)
+    rows: valid
+      .filter((r) => !isByeTeam(r.team))
+      .map((r) => ({ ...r, position: r.position - byes.filter((p) => p < r.position).length }))
       .sort((a, b) => a.position - b.position)
       .map((r) => ({
         position: r.position,
