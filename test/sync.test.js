@@ -253,9 +253,9 @@ describe('when the everyday pass is due', () => {
     assert.equal(baselineDue(matches, new Date('2026-10-25T08:00:00Z')), true);
   });
 
-  test('not on a quiet day, except at hours divisible by six', () => {
+  test('also on a quiet day and at any hour (GitHub starts timed runs only now and then)', () => {
     const matches = days('2026-10-24T11:00:00Z');
-    assert.equal(baselineDue(matches, new Date('2026-10-22T09:07:00Z')), false); // 11:07 Slovak time
+    assert.equal(baselineDue(matches, new Date('2026-10-22T09:07:00Z')), true); // 11:07 Slovak time
     assert.equal(baselineDue(matches, new Date('2026-10-22T10:07:00Z')), true); // 12:07
     assert.equal(baselineDue(matches, new Date('2026-10-22T16:07:00Z')), true); // 18:07
   });
@@ -623,14 +623,14 @@ describe('a whole match day in one run', () => {
     assert.equal(summary.finished, 1);
   });
 
-  test('a day with no match more than ends at once', async () => {
+  test('a day with no match does the everyday pass once and ends at once', async () => {
     const quiet = new MemoryStore({
       matches: [{ id: ID, doc: buildMatchDoc({ competition, leagueName: 'x', id: ID, raw: rawById(MATCH_ID), now: new Date('2026-10-23T09:00:00Z') }) }],
     });
-    const env = setUp('2026-10-23T09:07:00Z', { store: quiet }); // 11:07 on Friday: not the sixth hour, no match today or yesterday
+    const env = setUp('2026-10-23T09:07:00Z', { store: quiet }); // 11:07 on Friday: no match today
     const summary = await run(env);
-    assert.equal(summary.baselines, 0);
-    assert.deepEqual(env.client.requests, []);
+    assert.equal(summary.baselines, 1); // the pass is always done, so a change of the federation's site is picked up
+    assert.equal(summary.polls, 0);
     assert.equal(summary.continueNeeded, false);
   });
 

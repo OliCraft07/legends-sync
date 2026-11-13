@@ -9,7 +9,7 @@ import {
 } from './config.js';
 import { buildMatchDoc, buildStandingsDoc, hasMatchData, makeLogoFinder, needsDetail, ourMatches, sameDoc } from './convert.js';
 import { parseLevelPage, parseMatchPage } from './parse.js';
-import { slovakDay, slovakHour } from './time.js';
+import { slovakDay } from './time.js';
 
 const MINUTE = 60_000;
 
@@ -108,17 +108,15 @@ export async function runBaseline({ client, store, now = () => new Date(), log =
   return { matches: existing, summary };
 }
 
-/** Whether the everyday pass is due: on match days (and the day after, when results arrive late), every 6th hour otherwise, and always on an empty database. */
-export function baselineDue(matches, at) {
-  if (matches.size === 0) return true;
-  if (slovakHour(at) % 6 === 0) return true;
-  const today = slovakDay(at);
-  const yesterday = slovakDay(new Date(at.getTime() - 24 * 60 * MINUTE));
-  for (const doc of matches.values()) {
-    const day = slovakDay(doc.dateTime);
-    if (day === today || day === yesterday) return true;
-  }
-  return false;
+/**
+ * Whether the everyday pass is due. Always: GitHub starts the timed runs only now and then
+ * (a handful a day, not two an hour), so a rule like "only at hours divisible by six" can be
+ * missed for days, and a change on the federation's site (a kickoff moved, a time swapped
+ * between categories) then never reaches the app. The pass is cheap (5 pages, ~20 s), and
+ * [runDaemon] still does it at most every `baselineEveryMinutes` within one run.
+ */
+export function baselineDue() {
+  return true;
 }
 
 function isDone(doc) {
