@@ -59,6 +59,11 @@ export async function runBaseline({ client, store, now = () => new Date(), log =
 
     for (const { id, raw } of ours) {
       const before = existing.get(id) ?? null;
+      // A result an administrator entered by hand and locked in the app is never overwritten.
+      if (before?.manual === true) {
+        summary.unchanged++;
+        continue;
+      }
       const at = now();
       let detail = null;
       if (needsDetail(raw, before, at)) {
@@ -127,7 +132,7 @@ function isDone(doc) {
 export function liveCandidates(matches, at, lookaheadMinutes = 75) {
   const result = new Map();
   for (const [id, doc] of matches) {
-    if (doc.timeUnknown || !doc.szhId) continue;
+    if (doc.timeUnknown || !doc.szhId || doc.manual === true) continue;
     const kickoff = doc.dateTime.getTime();
     if (at.getTime() > kickoff + LIVE_TRAIL_MINUTES * MINUTE) continue;
     if (at.getTime() < kickoff - lookaheadMinutes * MINUTE) continue;
@@ -276,7 +281,7 @@ export async function runLive({
 function matchesLeftToday(matches, at) {
   const today = slovakDay(at);
   for (const doc of matches.values()) {
-    if (doc.timeUnknown || !doc.szhId) continue;
+    if (doc.timeUnknown || !doc.szhId || doc.manual === true) continue;
     const kickoff = doc.dateTime.getTime();
     const ongoing = at.getTime() <= kickoff + LIVE_TRAIL_MINUTES * MINUTE && !(isDone(doc) && at.getTime() > kickoff);
     const comingToday = kickoff > at.getTime() && slovakDay(doc.dateTime) === today;

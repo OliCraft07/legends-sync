@@ -111,6 +111,53 @@ describe('the everyday pass', () => {
     assert.equal(store.matches.get(id).venue, 'Prešov, hala');
   });
 
+  test('a match an admin locked by hand is never overwritten, whatever the federation says', async () => {
+    const store = new MemoryStore();
+    await baseline(clientWith(), store);
+    const id = 'szh-starsiDorastenci-k7';
+    const mine = { ...store.matches.get(id), homeScore: 31, awayScore: 22, manual: true };
+    store.matches.set(id, mine);
+    const writesBefore = store.writes.length;
+
+    // The federation lists another result and the page of the match changed too.
+    const changed = fixture('level-236');
+    changed.levelTabs[1].childLevels[0].matches.find((m) => m.id === 90785).homeParticipantResult = '50';
+    const client = clientWith({ 90785: matchHtml(detailOf(90785, { homeParticipantResult: '50' })) });
+    client.levels['236/258'] = levelHtml(changed);
+
+    const { summary } = await baseline(client, store);
+
+    assert.deepEqual(store.matches.get(id), mine);
+    assert.equal(store.writes.length, writesBefore);
+    assert.equal(summary.updated, 0);
+    assert.equal(summary.unchanged, 6);
+    // Its own page is not even downloaded.
+    assert.ok(!client.requests.includes('match 90785'));
+  });
+
+  test('without the lock the same change is written (the lock is what protects)', async () => {
+    const store = new MemoryStore();
+    await baseline(clientWith(), store);
+    const id = 'szh-starsiDorastenci-k7';
+    store.matches.set(id, { ...store.matches.get(id), homeScore: 31, awayScore: 22, manual: false });
+
+    await baseline(clientWith(), store);
+
+    assert.equal(store.matches.get(id).homeScore, 49);
+  });
+
+  test('a locked match does not hold up the others', async () => {
+    const store = new MemoryStore();
+    await baseline(clientWith(), store);
+    store.matches.set('szh-starsiDorastenci-k7', { ...store.matches.get('szh-starsiDorastenci-k7'), manual: true });
+    store.matches.delete('szh-starsiDorastenci-k8');
+
+    const { summary } = await baseline(clientWith(), store);
+
+    assert.equal(summary.added, 1);
+    assert.ok(store.matches.has('szh-starsiDorastenci-k8'));
+  });
+
   test('a team without a logo in the table gets the one its matches (or another category) show', async () => {
     const changed = fixture('level-236');
     const board = changed.levelTabs[0].childLevels[0].scoreboards;
@@ -294,6 +341,14 @@ describe('which matches are followed live', () => {
     const live = doc('2026-10-24T11:00:00Z', { homeScore: 5, awayScore: 4, details: {}, live: true });
     assert.equal(liveCandidates(new Map([['f', finished], ['t', noTime], ['n', noId]]), at).size, 0);
     assert.equal(liveCandidates(new Map([['l', live]]), at).size, 1);
+  });
+
+  test('not a match an admin locked by hand', () => {
+    const at = new Date('2026-10-24T11:30:00Z');
+    const locked = doc('2026-10-24T11:00:00Z', { homeScore: 31, awayScore: 22, manual: true });
+    const same = doc('2026-10-24T11:00:00Z', { homeScore: 31, awayScore: 22, manual: false });
+    assert.equal(liveCandidates(new Map([['m', locked]]), at).size, 0);
+    assert.equal(liveCandidates(new Map([['m', same]]), at).size, 1);
   });
 });
 
