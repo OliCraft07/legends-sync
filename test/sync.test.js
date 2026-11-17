@@ -439,7 +439,8 @@ describe('following a match live', () => {
     const last = env.written.at(-1);
     assert.equal(last.live, false);
     assert.ok(last.minutes >= 70 && last.minutes <= 72, `ended at ${last.minutes}`);
-    assert.ok(env.time.minutes() <= 73, `stopped at ${env.time.minutes()}`);
+    // ...and it keeps checking for 25 more minutes for goals written late, then stops.
+    assert.ok(env.time.minutes() >= 95 && env.time.minutes() <= 98, `stopped at ${env.time.minutes()}`);
   });
 
   test('replay of the men\'s match on 25 October, as its log shows: batches every five minutes, a ten-minute half-time gap', async () => {
@@ -492,6 +493,54 @@ describe('following a match live', () => {
     assert.equal(last.live, false);
     assert.ok(last.minutes >= 86 && last.minutes <= 88, `ended at ${last.minutes}`);
   });
+  test('goals the federation writes after the match was declared over are added, and it never shows "in progress" again', async () => {
+    // Like the men\'s match on 15 November: the last batch came long after the quiet that ended it.
+    const batches = [[6, '3:2', 5], [12, '6:5', 11], [20, '9:9', 18], [27, '12:12', 24], [48, '16:17', 33], [53, '20:19', 39], [72, '24:22', 46]];
+    const athlete = fixture('match-finished').homeParticipantLineup[0];
+    const homeId = rawById(MATCH_ID).homeParticipant.id;
+    const page = (minutes) => {
+      const batch = [...batches].reverse().find(([from]) => minutes >= from);
+      if (!batch) return { state: 'Upcoming', homeParticipantResult: null, visitingParticipantResult: null, matchEvents: [] };
+      const [, score, count] = batch;
+      const [home, away] = score.split(':');
+      return {
+        state: 'Finished',
+        homeParticipantResult: home,
+        visitingParticipantResult: away,
+        matchEvents: Array.from({ length: count }, (_, i) => ({
+          date: new Date(kickoffMs + i * 80_000).toISOString(),
+          eventType: 'goal',
+          description: 's1',
+          matchPart: i < 24 ? 1 : 2,
+          result: `${i + 1}:0`,
+          athlete,
+          participant: { id: homeId },
+        })),
+      };
+    };
+    const env = setUp('2026-10-24T10:55:00Z', page);
+
+    const summary = await run(env);
+
+    assert.deepEqual(summary.errors, []);
+    assert.equal(summary.finished, 1);
+    const final = env.store.matches.get(ID);
+    assert.equal(final.live, false);
+    assert.equal(`${final.homeScore}:${final.awayScore}`, '24:22');
+    assert.equal(final.details.events.length, 46);
+
+    // It was declared over after the quiet that followed the batch at minute 53 (about minute 61),
+    // and the late batch at minute 72 was still taken, without going back to "in progress".
+    const endIndex = env.written.findIndex((w) => w.live === false);
+    assert.ok(endIndex > 0);
+    assert.ok(env.written[endIndex].minutes >= 60 && env.written[endIndex].minutes <= 63, `ended at ${env.written[endIndex].minutes}`);
+    assert.ok(env.written.slice(endIndex).every((w) => w.live === false), 'finished from the end on');
+    assert.equal(env.written.at(-1).score, '24:22');
+    assert.ok(env.written.at(-1).minutes >= 72 && env.written.at(-1).minutes <= 73, `completed at ${env.written.at(-1).minutes}`);
+    // It stopped checking 25 minutes after the end.
+    assert.ok(env.time.minutes() >= 86 && env.time.minutes() <= 89, `stopped at ${env.time.minutes()}`);
+  });
+
   test('a match the federation lists as "Finished" without a result is never taken for over', async () => {
     // Like the two youth matches with the wrong date.
     const env = setUp('2026-10-24T10:30:00Z', () => ({ state: 'Finished', homeParticipantResult: null, visitingParticipantResult: null, matchEvents: [] }));
@@ -531,7 +580,8 @@ describe('following a match live', () => {
     await run(env);
 
     assert.equal(env.store.matches.get(ID).live, false);
-    assert.ok(env.time.minutes() >= 100 && env.time.minutes() <= 101, `stopped at ${env.time.minutes()}`);
+    // Declared over at minute 100, then the 25 minutes of checking for late goals.
+    assert.ok(env.time.minutes() >= 125 && env.time.minutes() <= 127, `stopped at ${env.time.minutes()}`);
   });
 
   test('a goal after the match was thought to be over makes it live again at the next everyday pass', async () => {
@@ -643,7 +693,7 @@ describe('a whole match day in one run', () => {
     assert.equal(doc.homeScore, 23);
     assert.equal(doc.details.events.length, 23);
     // The everyday pass seeing a match in progress does not end or spoil it.
-    assert.ok(env.time.minutes() <= 73, `stopped at ${env.time.minutes()}`);
+    assert.ok(env.time.minutes() <= 99, `stopped at ${env.time.minutes()}`);
     // It did not start following before the kickoff minus ten minutes.
     const firstPoll = env.client.requests.indexOf(`match ${MATCH_ID}`);
     assert.ok(firstPoll >= 0);

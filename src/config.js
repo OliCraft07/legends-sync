@@ -39,6 +39,15 @@ export const OVER_AFTER_MINUTES = 100;
 export const QUIET_MINUTES = 8;
 export const MIN_PLAYED_MINUTES = 30;
 
+/**
+ * The federation's scorers sometimes enter the last goals of a match long after its end (on
+ * 15 November the last nine events came over ten minutes after the quiet that ended the match).
+ * So a match that was declared over (and is shown as finished at once, so nobody sees "in
+ * progress" for longer than needed) is still read for this many minutes, and only gets its
+ * score and events completed; it never goes back to "in progress".
+ */
+export const FINAL_CHECK_MINUTES = 25;
+
 /** A match whose events appear up to this many minutes before the scheduled kickoff has simply started early. */
 export const EARLY_START_MINUTES = 15;
 

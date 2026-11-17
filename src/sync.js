@@ -1,5 +1,6 @@
 import {
   competitions as defaultCompetitions,
+  FINAL_CHECK_MINUTES,
   LIVE_LEAD_MINUTES,
   LIVE_TRAIL_MINUTES,
   MIN_PLAYED_MINUTES,
@@ -147,6 +148,20 @@ function isActive(doc, at) {
   return doc.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE <= at.getTime();
 }
 
+/**
+ * The matches declared over a short while ago ([FINAL_CHECK_MINUTES]), which are still read for
+ * the goals the federation wrote late. [watch] holds when each one ended.
+ */
+function finalChecks(watch, matches, at) {
+  const result = new Map();
+  for (const [id, seen] of watch) {
+    if (!seen.endedAt || at.getTime() - seen.endedAt.getTime() >= FINAL_CHECK_MINUTES * MINUTE) continue;
+    const doc = matches.get(id);
+    if (doc) result.set(id, doc);
+  }
+  return result;
+}
+
 /** Our team's id in a match: the side of the stored document that is ours. */
 function teamIdOf(detail, doc) {
   const home = doc.homeTeam === OUR_TEAM_NAME;
@@ -180,11 +195,15 @@ export async function liveTick({ client, store, matches, active, watch, now, log
         seen.changedAt = at;
       }
       watch.set(id, seen);
+      seen.lastPollAt = at;
 
       const elapsed = (at.getTime() - new Date(detail.dateFrom).getTime()) / MINUTE;
       const quietFor = (at.getTime() - seen.changedAt.getTime()) / MINUTE;
       const secondHalf = events.some((e) => e.matchPart >= 2);
+      // A match already declared over is only being completed: it stays finished.
+      const checking = seen.endedAt != null;
       const over =
+        !checking &&
         hasMatchData(detail) &&
         (elapsed >= OVER_AFTER_MINUTES || (secondHalf && elapsed >= MIN_PLAYED_MINUTES && quietFor >= QUIET_MINUTES));
 
@@ -197,7 +216,7 @@ export async function liveTick({ client, store, matches, active, watch, now, log
         detail,
         existing: doc,
         now: at,
-        finished: over,
+        finished: over || checking,
       });
       // The label ("1. liga · 8. kolo") stays as the everyday pass wrote it.
       next.competition = doc.competition || next.competition;
@@ -205,22 +224,30 @@ export async function liveTick({ client, store, matches, active, watch, now, log
       log(
         `${id}: stav ${detail.state}, ${detail.homeParticipantResult ?? '-'}:${detail.visitingParticipantResult ?? '-'}, ` +
           `${events.length} udalostí, ${elapsed.toFixed(0)} min od výkopu, ticho ${quietFor.toFixed(0)} min` +
-          `${over ? ' -> koniec' : ''}`,
+          `${over ? ' -> koniec' : ''}${checking ? ' (kontrola po konci)' : ''}`,
       );
 
       if (!sameDoc(next, doc)) {
         await store.saveMatches([{ id, doc: next }]);
         summary.writes++;
-        log(`${id}: zapísané ${next.homeScore ?? '-'}:${next.awayScore ?? '-'}${next.live ? ' (prebieha)' : ''}`);
+        log(`${id}: zapísané ${next.homeScore ?? '-'}:${next.awayScore ?? '-'}${next.live ? ' (prebieha)' : checking ? ' (doplnené po konci)' : ''}`);
       }
       matches.set(id, next);
       if (over) {
+        seen.endedAt = at;
         ended.push(id);
         summary.finished++;
         log(`${id}: zápas skončil`);
       }
     } catch (error) {
       failed++;
+      // A page that could not be read says nothing about the match, so it is not "quiet" time.
+      const seen = watch.get(id);
+      if (seen?.lastPollAt && !seen.endedAt) {
+        const at = now();
+        seen.changedAt = new Date(seen.changedAt.getTime() + (at.getTime() - seen.lastPollAt.getTime()));
+        seen.lastPollAt = at;
+      }
       summary.errors.push(`${id}: ${error.message}`);
       log(`${id}: chyba (${error.message})`);
     }
@@ -251,8 +278,8 @@ export async function runLive({
   const watch = new Map();
   let failuresInARow = 0;
 
-  while (pending.size > 0 && now().getTime() - startedAt < maxMinutes * MINUTE) {
-    const active = [...pending].filter(([, doc]) => isActive(doc, now()));
+  while ((pending.size > 0 || finalChecks(watch, matches, now()).size > 0) && now().getTime() - startedAt < maxMinutes * MINUTE) {
+    const active = [...new Map([...pending, ...finalChecks(watch, matches, now())])].filter(([, doc]) => isActive(doc, now()));
 
     if (active.length === 0) {
       const earliest = Math.min(...[...pending.values()].map((d) => d.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE));
@@ -271,14 +298,15 @@ export async function runLive({
       summary.errors.push('Desať kôl po sebe sa nič nepodarilo stiahnuť, končím.');
       break;
     }
-    if (pending.size > 0) await sleep(intervalMs);
+    if (pending.size > 0 || finalChecks(watch, matches, now()).size > 0) await sleep(intervalMs);
   }
 
   return summary;
 }
 
-/** Whether a match is still to come today, or is being played (or has just been, and its end is not written). */
-function matchesLeftToday(matches, at) {
+/** Whether a match is still to come today, or is being played (or has just been, and its end is not written or still being completed). */
+function matchesLeftToday(matches, at, watch = new Map()) {
+  if (finalChecks(watch, matches, at).size > 0) return true;
   const today = slovakDay(at);
   for (const doc of matches.values()) {
     if (doc.timeUnknown || !doc.szhId || doc.manual === true) continue;
@@ -335,13 +363,15 @@ export async function runDaemon({
       log(`Hlavné sťahovanie: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky: ${s.standingsWritten}`);
     }
 
-    if (!matchesLeftToday(matches, now())) break;
+    if (!matchesLeftToday(matches, now(), watch)) break;
     if (now().getTime() - startedAt >= maxMinutes * MINUTE) {
       summary.continueNeeded = true;
       break;
     }
 
-    const active = [...liveCandidates(matches, now(), LIVE_LEAD_MINUTES)].filter(([, doc]) => isActive(doc, now()));
+    const active = [...new Map([...liveCandidates(matches, now(), LIVE_LEAD_MINUTES), ...finalChecks(watch, matches, now())])].filter(([, doc]) =>
+      isActive(doc, now()),
+    );
     if (active.length > 0) {
       const { failed } = await liveTick({ client, store, matches, active, watch, now, log, summary });
       failuresInARow = failed === active.length ? failuresInARow + 1 : 0;
