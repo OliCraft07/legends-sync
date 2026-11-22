@@ -1,4 +1,6 @@
 import {
+  BASELINE_RETRIES,
+  BASELINE_RETRY_MINUTES,
   competitions as defaultCompetitions,
   FINAL_CHECK_MINUTES,
   LIVE_LEAD_MINUTES,
@@ -345,27 +347,45 @@ export async function runDaemon({
   const summary = { baselines: 0, polls: 0, writes: 0, finished: 0, errors: [], baselineErrors: [], baselinesWithErrors: 0, warnings: [], continueNeeded: false };
   let lastBaselineAt = null;
   let failuresInARow = 0;
+  // When the federation's site gave nothing at all (it is down for a moment), the pass is
+  // tried again a little later instead of being counted as a failure at once. The live
+  // matches are followed in the meantime, since the wait is not a sleep of its own.
+  let retriesLeft = BASELINE_RETRIES;
+  let retryAt = null;
 
   for (;;) {
     const at = now();
 
-    if (baselineDue(matches, at) && (lastBaselineAt === null || at.getTime() - lastBaselineAt.getTime() >= baselineEveryMinutes * MINUTE)) {
+    const regularDue = lastBaselineAt === null || at.getTime() - lastBaselineAt.getTime() >= baselineEveryMinutes * MINUTE;
+    const retryDue = retryAt !== null && at.getTime() >= retryAt;
+    if (baselineDue(matches, at) && (regularDue || retryDue)) {
       const result = await runBaseline({ client, store, now, log, competitions });
       matches = result.matches;
       lastBaselineAt = at;
-      summary.baselines++;
-      for (const warning of result.summary.warnings) {
-        if (!summary.warnings.includes(warning)) summary.warnings.push(warning);
-      }
-      summary.baselineErrors.push(...result.summary.errors);
-      if (result.summary.errors.length > 0) summary.baselinesWithErrors++;
       const s = result.summary;
-      log(`Hlavné sťahovanie: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky: ${s.standingsWritten}`);
+      const nothingRead = competitions.length > 0 && s.errors.length >= competitions.length;
+      if (nothingRead && retriesLeft > 0) {
+        retriesLeft--;
+        retryAt = at.getTime() + BASELINE_RETRY_MINUTES * MINUTE;
+        log(`Zväz nevrátil žiadnu súťaž (${s.errors[0]}); skúsim to znova o ${BASELINE_RETRY_MINUTES} min.`);
+      } else {
+        retriesLeft = BASELINE_RETRIES;
+        retryAt = null;
+        summary.baselines++;
+        for (const warning of s.warnings) {
+          if (!summary.warnings.includes(warning)) summary.warnings.push(warning);
+        }
+        summary.baselineErrors.push(...s.errors);
+        if (s.errors.length > 0) summary.baselinesWithErrors++;
+        log(`Hlavné sťahovanie: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky: ${s.standingsWritten}`);
+      }
     }
 
-    if (!matchesLeftToday(matches, now(), watch)) break;
+    // A pass waiting to be tried again keeps the run going even when the match day is over.
+    const matchDayOn = matchesLeftToday(matches, now(), watch);
+    if (!matchDayOn && retryAt === null) break;
     if (now().getTime() - startedAt >= maxMinutes * MINUTE) {
-      summary.continueNeeded = true;
+      summary.continueNeeded = matchDayOn;
       break;
     }
 
@@ -390,7 +410,8 @@ export async function runDaemon({
         .filter((d) => !d.timeUnknown && d.szhId && d.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE > now().getTime())
         .map((d) => d.dateTime.getTime() - LIVE_LEAD_MINUTES * MINUTE),
     );
-    const nextBaseline = lastBaselineAt === null ? now().getTime() : lastBaselineAt.getTime() + baselineEveryMinutes * MINUTE;
+    const nextBaseline =
+      retryAt ?? (lastBaselineAt === null ? now().getTime() : lastBaselineAt.getTime() + baselineEveryMinutes * MINUTE);
     const wait = Math.min(Math.max(Math.min(nextKickoff, nextBaseline) - now().getTime(), 30_000), 5 * MINUTE);
     log(`Čakám ${Math.round(wait / 1000)} s (najbližší zápas alebo ďalšie hlavné sťahovanie)`);
     await sleep(wait);

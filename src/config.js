@@ -48,6 +48,14 @@ export const MIN_PLAYED_MINUTES = 30;
  */
 export const FINAL_CHECK_MINUTES = 25;
 
+/**
+ * When the federation's site gives nothing at all in the everyday pass (every competition
+ * fails: it was down for a moment, as on 21 November), the pass is tried again this many times,
+ * this many minutes apart, before the run counts it as a failure.
+ */
+export const BASELINE_RETRIES = 2;
+export const BASELINE_RETRY_MINUTES = 2;
+
 /** A match whose events appear up to this many minutes before the scheduled kickoff has simply started early. */
 export const EARLY_START_MINUTES = 15;
 

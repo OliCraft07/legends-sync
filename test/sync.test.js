@@ -708,7 +708,7 @@ describe('a whole match day in one run', () => {
     assert.ok(summary.baselines >= 4);
   });
 
-  test('one failed everyday pass in the day does not spoil the day, and is counted', async () => {
+  test('an everyday pass that gets nothing is tried again two minutes later, and then it is no failure at all', async () => {
     const env = setUp('2026-10-24T08:00:00Z');
     const original = env.client.levels['236/258'];
     let calls = 0;
@@ -721,11 +721,88 @@ describe('a whole match day in one run', () => {
 
     const summary = await run(env);
 
-    assert.equal(summary.baselineErrors.length, 1);
-    assert.equal(summary.baselinesWithErrors, 1);
+    assert.deepEqual(summary.baselineErrors, []);
+    assert.equal(summary.baselinesWithErrors, 0);
     assert.ok(summary.baselines >= 3, 'the day went on');
     assert.equal(env.store.matches.get(ID).live, false);
     assert.equal(summary.finished, 1);
+  });
+
+  test('a pass that keeps failing is counted once, after the two retries, and the day goes on', async () => {
+    const env = setUp('2026-10-24T08:00:00Z');
+    const original = env.client.levels['236/258'];
+    let calls = 0;
+    // Passes 2, 3 and 4 asked for are all one and the same everyday pass and its two retries.
+    env.client.levels['236/258'] = () => {
+      calls++;
+      if (calls >= 2 && calls <= 4) throw new Error('Server slovakhandball.sk vrátil chybu 503.');
+      return original();
+    };
+
+    const summary = await run(env);
+
+    assert.equal(summary.baselineErrors.length, 1);
+    assert.equal(summary.baselinesWithErrors, 1);
+    assert.ok(summary.baselines >= 3, 'the day went on');
+    assert.equal(summary.finished, 1);
+    assert.equal(env.store.matches.get(ID).live, false);
+  });
+
+  test('the retries do not stop the live match from being followed', async () => {
+    // The federation's pages for the competition are down for the whole match, the match page is not.
+    const env = setUp('2026-10-24T10:20:00Z', {
+      store: new MemoryStore({
+        matches: [{ id: ID, doc: buildMatchDoc({ competition, leagueName: 'x', id: ID, raw: rawById(MATCH_ID), now: new Date('2026-10-24T09:00:00Z') }) }],
+      }),
+    });
+    env.client.levels['236/258'] = new Error('Server slovakhandball.sk vrátil chybu 503.');
+
+    const summary = await run(env);
+
+    assert.equal(summary.finished, 1);
+    assert.equal(env.store.matches.get(ID).live, false);
+    assert.equal(env.store.matches.get(ID).homeScore, 23);
+    assert.ok(summary.baselineErrors.length >= 1);
+  });
+
+  test('the federation being down on a day without a match (21 November): tried three times, then counted once', async () => {
+    const quiet = new MemoryStore({
+      matches: [{ id: ID, doc: buildMatchDoc({ competition, leagueName: 'x', id: ID, raw: rawById(MATCH_ID), now: new Date('2026-10-23T09:00:00Z') }) }],
+    });
+    const env = setUp('2026-10-23T09:07:00Z', { store: quiet }); // Friday: no match today
+    env.client.levels['236/258'] = new Error('Server slovakhandball.sk vrátil chybu 503.');
+
+    const summary = await run(env);
+
+    assert.equal(env.client.requests.filter((r) => r.startsWith('level ')).length, 3);
+    assert.equal(summary.baselines, 1);
+    assert.equal(summary.baselinesWithErrors, 1);
+    assert.equal(summary.baselineErrors.length, 1);
+    // The two retries were two minutes apart, and the run ended right after the last one.
+    const elapsedMinutes = (env.time.at() - Date.parse('2026-10-23T09:07:00Z')) / 60_000;
+    assert.ok(elapsedMinutes >= 4 && elapsedMinutes < 5, `ran for ${elapsedMinutes} minutes`);
+    assert.equal(summary.continueNeeded, false);
+  });
+
+  test('when the retry works on a day without a match, nothing is counted and the run ends', async () => {
+    const quiet = new MemoryStore({
+      matches: [{ id: ID, doc: buildMatchDoc({ competition, leagueName: 'x', id: ID, raw: rawById(MATCH_ID), now: new Date('2026-10-23T09:00:00Z') }) }],
+    });
+    const env = setUp('2026-10-23T09:07:00Z', { store: quiet });
+    const original = env.client.levels['236/258'];
+    let calls = 0;
+    env.client.levels['236/258'] = () => {
+      calls++;
+      if (calls === 1) throw new Error('Server slovakhandball.sk vrátil chybu 503.');
+      return original();
+    };
+
+    const summary = await run(env);
+
+    assert.equal(env.client.requests.filter((r) => r.startsWith('level ')).length, 2);
+    assert.equal(summary.baselines, 1);
+    assert.deepEqual(summary.baselineErrors, []);
+    assert.equal(summary.baselinesWithErrors, 0);
   });
 
   test('a day with no match does the everyday pass once and ends at once', async () => {

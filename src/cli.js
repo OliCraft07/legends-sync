@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
+import { BASELINE_RETRIES, BASELINE_RETRY_MINUTES, competitions } from './config.js';
 import { SiteClient } from './http.js';
 import { MemoryStore, ReadOnlyStore } from './store.js';
 import { liveCandidates, runBaseline, runDaemon, runLive } from './sync.js';
@@ -67,7 +68,13 @@ async function main() {
       log('Zápasový deň ešte neskončil: spustí sa ďalší beh.');
     }
   } else if (mode === 'baseline') {
-    const result = await runBaseline({ client, store, log });
+    let result = await runBaseline({ client, store, log });
+    // Nothing at all from the federation's site (it is down for a moment): try again a little later.
+    for (let attempt = 1; attempt <= BASELINE_RETRIES && result.summary.errors.length >= competitions.length; attempt++) {
+      log(`Zväz nevrátil žiadnu súťaž; skúsim to znova o ${BASELINE_RETRY_MINUTES} min.`);
+      await new Promise((resolve) => setTimeout(resolve, BASELINE_RETRY_MINUTES * 60_000));
+      result = await runBaseline({ client, store, log });
+    }
     const s = result.summary;
     log(`Zápasy: ${s.added} nových, ${s.updated} zmenených, ${s.unchanged} bez zmeny; tabuľky zapísané: ${s.standingsWritten}`);
     for (const warning of s.warnings) log(`Upozornenie: ${warning}`);
